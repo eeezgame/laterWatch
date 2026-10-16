@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+package-lock.json
+public/icons
+
+# 产品 / 调研文档由需求方维护，不纳入自动格式化
+PRD.md
+Research.md

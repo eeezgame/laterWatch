@@ -1,0 +1,334 @@
+:root {
+  --lw-sidebar-width: 320px;
+  --lw-color-bg: #ffffff;
+  --lw-color-surface: #f5f6fa;
+  --lw-color-border: #e5e7f0;
+  --lw-color-text: #1f2330;
+  --lw-color-text-weak: #7a8194;
+  --lw-color-primary: #4e6ef2;
+  --lw-radius-sm: 6px;
+  --lw-radius-md: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: var(--lw-sidebar-width);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--lw-color-text);
+  background: var(--lw-color-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.lw-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.lw-header {
+  flex: none;
+  padding: 12px 12px 8px;
+  border-bottom: 1px solid var(--lw-color-border);
+}
+
+.lw-header__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.lw-header__subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--lw-color-text-weak);
+}
+
+.lw-filters {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.lw-filters__tab {
+  padding: 4px 10px;
+  border: 1px solid var(--lw-color-border);
+  border-radius: 999px;
+  background: var(--lw-color-surface);
+  font-size: 12px;
+}
+
+.lw-filters__tab.is-active {
+  border-color: var(--lw-color-primary);
+  background: var(--lw-color-primary);
+  color: #ffffff;
+}
+
+.lw-main {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.lw-list {
+  padding: 8px 12px;
+}
+
+.lw-list__hint {
+  margin: 24px 0;
+  color: var(--lw-color-text-weak);
+  text-align: center;
+}
+
+.lw-list__items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lw-list__item {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--lw-color-border);
+  border-radius: var(--lw-radius-md);
+  background: var(--lw-color-surface);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.lw-list__item:hover {
+  border-color: var(--lw-color-primary);
+  background: #eef1fd;
+}
+
+.lw-list__item + .lw-list__item {
+  margin-top: 6px;
+}
+
+.lw-list__open {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.lw-list__cover {
+  flex: none;
+  width: 64px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: var(--lw-radius-sm);
+  background: var(--lw-color-border);
+}
+
+.lw-list__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.lw-list__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lw-list__platform {
+  align-self: flex-start;
+  padding: 1px 6px;
+  border-radius: var(--lw-radius-sm);
+  background: var(--lw-color-primary);
+  color: #ffffff;
+  font-size: 11px;
+}
+
+.lw-list__title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lw-list__remove {
+  flex: none;
+  margin-right: 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--lw-color-border);
+  border-radius: var(--lw-radius-sm);
+  background: #ffffff;
+  font-size: 12px;
+  color: var(--lw-color-text-weak);
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.lw-list__remove:hover {
+  border-color: #e05555;
+  color: #e05555;
+}
+
+/* 回收站列表项中的标题信息块直接位于 li 下，需自行撑开剩余宽度 */
+.lw-list__item > .lw-list__meta {
+  flex: 1;
+  padding: 8px 10px;
+}
+
+.lw-recycle__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.lw-recycle__count {
+  font-size: 12px;
+  color: var(--lw-color-text-weak);
+}
+
+.lw-recycle__clear {
+  padding: 4px 8px;
+  border: 1px solid #e05555;
+  border-radius: var(--lw-radius-sm);
+  background: #ffffff;
+  font-size: 12px;
+  color: #e05555;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.lw-recycle__clear:hover {
+  background: #e05555;
+  color: #ffffff;
+}
+
+.lw-recycle__action {
+  flex: none;
+  padding: 4px 8px;
+  border: 1px solid var(--lw-color-border);
+  border-radius: var(--lw-radius-sm);
+  background: #ffffff;
+  font-size: 12px;
+  color: var(--lw-color-text-weak);
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.lw-recycle__action + .lw-recycle__action {
+  margin-left: 6px;
+}
+
+.lw-recycle__action:last-child {
+  margin-right: 8px;
+}
+
+.lw-recycle__action:hover {
+  border-color: var(--lw-color-primary);
+  color: var(--lw-color-primary);
+}
+
+.lw-recycle__action--danger:hover {
+  border-color: #e05555;
+  color: #e05555;
+}
+
+/* 永久删除前的二次确认弹层，覆盖侧边栏整个视口 */
+.lw-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgb(15 19 30 / 45%);
+}
+
+.lw-confirm__dialog {
+  width: 100%;
+  max-width: 260px;
+  padding: 14px;
+  border-radius: var(--lw-radius-md);
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgb(15 19 30 / 18%);
+}
+
+.lw-confirm__text {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.lw-confirm__warning {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #e05555;
+}
+
+.lw-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.lw-confirm__cancel,
+.lw-confirm__ok {
+  padding: 5px 12px;
+  border: 1px solid var(--lw-color-border);
+  border-radius: var(--lw-radius-sm);
+  background: #ffffff;
+  font-size: 12px;
+}
+
+.lw-confirm__ok {
+  border-color: #e05555;
+  background: #e05555;
+  color: #ffffff;
+}
+
+.lw-list__open.is-completed .lw-list__title,
+.lw-list__open.is-completed .lw-list__cover {
+  opacity: 0.45;
+}
+
+.lw-footer {
+  flex: none;
+  padding: 8px 12px;
+  border-top: 1px solid var(--lw-color-border);
+}
+
+.lw-footer__entry {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--lw-color-border);
+  border-radius: var(--lw-radius-md);
+  background: var(--lw-color-surface);
+  text-align: left;
+}
