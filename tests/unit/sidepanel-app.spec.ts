@@ -266,4 +266,121 @@ describe('sidepanel App', () => {
 
     expect(wrapper.text()).toContain('新条目')
   })
+
+  /** 让每个条目占据固定高度，便于按指针纵坐标判定拖拽落点 */
+  function stubRowRects(wrapper: ReturnType<typeof mountApp>, rowHeight = 60): void {
+    wrapper.findAll('.lw-list__item').forEach((row, index) => {
+      vi.spyOn(row.element, 'getBoundingClientRect').mockReturnValue({
+        top: index * rowHeight,
+        bottom: (index + 1) * rowHeight,
+        height: rowHeight,
+        left: 0,
+        right: 300,
+        width: 300,
+        x: 0,
+        y: index * rowHeight,
+        toJSON: () => ({}),
+      } as DOMRect)
+    })
+  }
+
+  /** 在元素上按下指针并等待超过长按阈值 */
+  function longPress(element: Element, clientY = 10): Promise<void> {
+    element.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, clientY }))
+
+    return new Promise((resolve) => setTimeout(resolve, 340))
+  }
+
+  it('长按列表项后可拖拽调整顺序并落盘', async () => {
+    const first = makeItem({ id: 'bilibili:BV1first', title: '第一条' })
+    const second = makeItem({ id: 'douyin:730', platform: 'douyin', title: '第二条' })
+    await chrome.storage.local.set({ [STORAGE_KEYS.watchList]: [first, second] })
+
+    const wrapper = mountApp()
+    await flushPromises()
+    expect(wrapper.findAll('.lw-list__item')).toHaveLength(2)
+
+    stubRowRects(wrapper)
+    const rows = wrapper.findAll('.lw-list__item')
+
+    await longPress(rows[0].element)
+    await flushPromises()
+    expect(rows[0].classes()).toContain('is-dragging')
+
+    // 拖到第二个条目所在区间（60 ~ 120px）
+    window.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientY: 100 }))
+    window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }))
+    await flushPromises()
+
+    expect(rows[0].classes()).not.toContain('is-dragging')
+
+    const stored = await readStoredItems()
+    expect(stored.map((item) => item.id)).toEqual(['douyin:730', 'bilibili:BV1first'])
+  })
+
+  it('快速点击不进入拖拽，仍按打开视频处理', async () => {
+    const item = makeItem()
+    await chrome.storage.local.set({ [STORAGE_KEYS.watchList]: [item] })
+
+    stubOpenTabs([])
+    const tabsCreate = vi.spyOn(chrome.tabs, 'create')
+
+    const wrapper = mountApp()
+    await flushPromises()
+    stubRowRects(wrapper)
+
+    const row = wrapper.find('.lw-list__item')
+    row.element.dispatchEvent(
+      new MouseEvent('pointerdown', { bubbles: true, button: 0, clientY: 10 }),
+    )
+    window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }))
+    await flushPromises()
+
+    expect(row.classes()).not.toContain('is-dragging')
+
+    await row.find('.lw-list__open').trigger('click')
+    await flushPromises()
+
+    expect(tabsCreate).toHaveBeenCalledWith({ url: item.url })
+  })
+
+  it('拖拽结束后不误触发打开视频', async () => {
+    await chrome.storage.local.set({
+      [STORAGE_KEYS.watchList]: [
+        makeItem({ id: 'bilibili:BV1first' }),
+        makeItem({ id: 'douyin:730', platform: 'douyin' }),
+      ],
+    })
+
+    stubOpenTabs([])
+    const tabsCreate = vi.spyOn(chrome.tabs, 'create')
+
+    const wrapper = mountApp()
+    await flushPromises()
+    stubRowRects(wrapper)
+
+    const rows = wrapper.findAll('.lw-list__item')
+    await longPress(rows[0].element)
+    await flushPromises()
+
+    window.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientY: 100 }))
+    window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }))
+    // 浏览器会在指针抬起后同步补发一次 click，此处不作等待以复现该时序
+    await rows[0].find('.lw-list__open').trigger('click')
+
+    expect(tabsCreate).not.toHaveBeenCalled()
+  })
+
+  it('删除按钮不参与长按拖拽', async () => {
+    await chrome.storage.local.set({ [STORAGE_KEYS.watchList]: [makeItem()] })
+
+    const wrapper = mountApp()
+    await flushPromises()
+    stubRowRects(wrapper)
+
+    await longPress(wrapper.find('.lw-list__remove').element)
+    await flushPromises()
+
+    expect(wrapper.find('.lw-list__item.is-dragging').exists()).toBe(false)
+  })
 })

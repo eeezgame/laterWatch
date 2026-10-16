@@ -115,3 +115,22 @@ export function mergeWatchList(items: VideoItem[], incoming: VideoItem): MergeWa
     added: true,
   }
 }
+
+/**
+ * 在可见条目子集内应用拖拽后的新顺序。
+ * 只重排 orderedIds 涉及的那些槽位，其余条目（其他平台、回收站）保持原有位置，
+ * 因此在筛选视图下拖拽不会打乱整体顺序。
+ */
+export function reorderVisibleItems(all: VideoItem[], orderedIds: string[]): VideoItem[] {
+  const byId = new Map(all.map((item) => [item.id, item]))
+  const queued = orderedIds
+    .map((id) => byId.get(id))
+    .filter((item): item is VideoItem => Boolean(item))
+
+  if (queued.length === 0) return all
+
+  // 依次填充这些条目原本占据的槽位，其余条目原地不动
+  const moving = new Set(queued)
+  let cursor = 0
+  return all.map((item) => (moving.has(item) ? queued[cursor++] : item))
+}

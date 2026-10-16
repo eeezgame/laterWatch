@@ -123,6 +123,18 @@ button {
   margin-top: 6px;
 }
 
+/* 拖拽排序进行中：禁止选中文本，被拖条目浮起以便与落点区分 */
+.lw-list__items.is-reordering {
+  user-select: none;
+}
+
+.lw-list__item.is-dragging {
+  position: relative;
+  z-index: 1;
+  border-color: var(--lw-color-primary);
+  box-shadow: 0 4px 12px rgb(15 19 30 / 16%);
+}
+
 .lw-list__open {
   display: flex;
   flex: 1;

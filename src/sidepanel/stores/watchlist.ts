@@ -4,7 +4,7 @@ import { defineStore } from 'pinia'
 import { STORAGE_KEYS } from '@/shared/constants'
 import type { ListFilter, VideoItem } from '@/shared/types'
 import { getItem, setItem } from '@/shared/utils/storage'
-import { normalizeWatchList } from '@/shared/utils/video'
+import { normalizeWatchList, reorderVisibleItems } from '@/shared/utils/video'
 
 /** 移除条目的删除标记，使其回到待看列表（不修改入参） */
 function withoutDeletedAt(item: VideoItem): VideoItem {
@@ -84,6 +84,16 @@ export const useWatchListStore = defineStore('watchList', () => {
     await persist()
   }
 
+  /** 应用拖拽后的可见条目顺序：顺序未变化时不产生写入 */
+  async function reorderVisible(orderedIds: string[]): Promise<void> {
+    const next = reorderVisibleItems(items.value, orderedIds)
+    const changed = next.some((item, index) => item.id !== items.value[index]?.id)
+    if (!changed) return
+
+    items.value = next
+    await persist()
+  }
+
   /** 订阅 storage 变更，使网页悬浮按钮添加的条目即时出现在侧边栏 */
   function bindStorageSync(): void {
     chrome.storage.onChanged.addListener((changes, areaName) => {
@@ -112,6 +122,7 @@ export const useWatchListStore = defineStore('watchList', () => {
     restoreItem,
     purgeItem,
     clearRecycleBin,
+    reorderVisible,
     bindStorageSync,
     setFilter,
   }

@@ -9,6 +9,7 @@ import {
   findExistingVideoTab,
   mergeWatchList,
   normalizeVideoUrl,
+  reorderVisibleItems,
 } from '@/shared/utils/video'
 
 function createItem(overrides: Partial<VideoItem> = {}): VideoItem {
@@ -155,5 +156,47 @@ describe('待看列表合并去重', () => {
     expect(result.items).toHaveLength(2)
     expect(result.items[0]).toBe(incoming)
     expect(result.items[0].deletedAt).toBeUndefined()
+  })
+})
+
+describe('拖拽重排可见条目', () => {
+  it('按给定顺序重排全部可见条目', () => {
+    const items = [createItem({ id: 'a' }), createItem({ id: 'b' }), createItem({ id: 'c' })]
+
+    expect(reorderVisibleItems(items, ['c', 'a', 'b']).map((item) => item.id)).toEqual([
+      'c',
+      'a',
+      'b',
+    ])
+  })
+
+  it('只填充被拖拽条目原本占据的槽位，其余条目原地不动', () => {
+    // b 不在可见范围内（例如被平台筛选排除），拖拽 a / c / d 时它的位置不应改变
+    const items = [
+      createItem({ id: 'a' }),
+      createItem({ id: 'b' }),
+      createItem({ id: 'c' }),
+      createItem({ id: 'd' }),
+    ]
+
+    expect(reorderVisibleItems(items, ['d', 'a', 'c']).map((item) => item.id)).toEqual([
+      'd',
+      'b',
+      'a',
+      'c',
+    ])
+  })
+
+  it('顺序与给定顺序一致时内容保持不变', () => {
+    const items = [createItem({ id: 'a' }), createItem({ id: 'b' })]
+
+    expect(reorderVisibleItems(items, ['a', 'b']).map((item) => item.id)).toEqual(['a', 'b'])
+  })
+
+  it('空顺序或含未知 id 时原样返回列表', () => {
+    const items = [createItem({ id: 'a' }), createItem({ id: 'b' })]
+
+    expect(reorderVisibleItems(items, [])).toBe(items)
+    expect(reorderVisibleItems(items, ['missing', 'a'])).toEqual(items)
   })
 })
