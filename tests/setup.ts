@@ -19,6 +19,31 @@ const storageData = new Map<string, unknown>()
 const changeListeners = new Set<StorageChangeListener>()
 const messageListeners = new Set<RuntimeMessageListener>()
 
+/** 简单事件发射器，用于 chrome.tabs / windows 等事件 mock */
+function createEventEmitter<L extends (...args: never[]) => void>() {
+  const listeners = new Set<L>()
+  return {
+    addListener(listener: L): void {
+      listeners.add(listener)
+    },
+    removeListener(listener: L): void {
+      listeners.delete(listener)
+    },
+    hasListener(listener: L): boolean {
+      return listeners.has(listener)
+    },
+    _emit(...args: Parameters<L>): void {
+      listeners.forEach((listener) => listener(...args))
+    },
+    _size(): number {
+      return listeners.size
+    },
+    _reset(): void {
+      listeners.clear()
+    },
+  }
+}
+
 function resolveKeys(keys?: string | string[] | null): string[] {
   if (keys === undefined || keys === null) return [...storageData.keys()]
   return Array.isArray(keys) ? keys : [keys]
@@ -122,10 +147,18 @@ const chromeStorageMock = {
     update(): Promise<unknown> {
       return Promise.resolve(undefined)
     },
+    onActivated: createEventEmitter<(info: { tabId: number; windowId: number }) => void>(),
+    onUpdated: createEventEmitter<
+      (tabId: number, changeInfo: Record<string, unknown>, tab: unknown) => void
+    >(),
+    onRemoved: createEventEmitter<(tabId: number, info: { windowId?: number }) => void>(),
   },
   windows: {
     update(): Promise<unknown> {
       return Promise.resolve(undefined)
+    },
+    getCurrent(callback: (win: { id?: number }) => void): void {
+      callback({ id: 1 })
     },
   },
 }
@@ -135,5 +168,8 @@ vi.stubGlobal('chrome', chromeStorageMock)
 beforeEach(() => {
   storageData.clear()
   changeListeners.clear()
+  chromeStorageMock.tabs.onActivated._reset()
+  chromeStorageMock.tabs.onUpdated._reset()
+  chromeStorageMock.tabs.onRemoved._reset()
   // messageListeners 故意不清空：background 常驻监听器需跨用例存活
 })

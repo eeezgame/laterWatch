@@ -103,8 +103,14 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (tab) void handleContextMenuClick(info, tab)
 })
 
+/**
+ * 缓存每个活动 tab 当前的视频草稿，key = tab.id
+ * 用于在 content script 主动上报后，侧栏 queryCurrentVideo 能直接命中最新数据。
+ */
+const currentVideoByTab = new Map<number, VideoDraft>()
+
 chrome.runtime.onMessage.addListener(
-  (message: RuntimeMessage, _sender, sendResponse: (response: RuntimeResponse) => void) => {
+  (message: RuntimeMessage, sender, sendResponse: (response: RuntimeResponse) => void) => {
     if (message.type === RUNTIME_MESSAGE_TYPES.ping) {
       sendResponse({ ok: true, data: 'pong' })
       return false
@@ -119,7 +125,94 @@ chrome.runtime.onMessage.addListener(
       return true
     }
 
+    if (message.type === RUNTIME_MESSAGE_TYPES.queryCurrentVideo) {
+      const force = (message.payload as { force?: boolean } | undefined)?.force === true
+      void queryCurrentVideo(force).then(sendResponse)
+      return true
+    }
+
+    if (message.type === RUNTIME_MESSAGE_TYPES.currentVideoChanged) {
+      const tabId = sender.tab?.id
+      if (tabId) {
+        const draft = message.payload as VideoDraft | undefined
+        if (draft) currentVideoByTab.set(tabId, draft)
+        else currentVideoByTab.delete(tabId)
+      }
+      // 广播给所有 runtime context（包括侧栏），侧栏用它实时刷新卡片
+      void chrome.runtime.sendMessage({
+        type: RUNTIME_MESSAGE_TYPES.currentVideoChanged,
+        payload: message.payload ?? null,
+      })
+      sendResponse({ ok: true })
+      return false
+    }
+
     sendResponse({ ok: false, error: `不支持的消息类型：${message.type}` })
     return false
   },
 )
+
+/** tab 关闭时清理缓存 */
+chrome.tabs.onRemoved.addListener((tabId) => {
+  currentVideoByTab.delete(tabId)
+})
+
+/**
+ * 侧栏调用：查询当前活动标签页的视频信息。
+ * 正常查询优先读 content script 主动上报的缓存；
+ * force=true（用户点击刷新按钮）时跳过缓存，直接向 content script 拉取最新，
+ * 与右键菜单"添加到稍后再看"的提取逻辑保持一致。
+ * 无论哪种模式，成功提取后都会回写缓存。
+ */
+async function queryCurrentVideo(force = false): Promise<RuntimeResponse<VideoDraft | null>> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id || !tab.url) {
+    return { ok: false, data: null }
+  }
+
+  if (!force) {
+    // 优先读缓存（content script 主动上报过的最新数据）
+    const cached = currentVideoByTab.get(tab.id)
+    if (cached) return { ok: true, data: cached }
+  }
+
+  const platform = resolvePlatform(tab.url)
+  if (!platform) {
+    return { ok: false, data: null }
+  }
+
+  // 直接向 content script 拉取；force 模式与右键菜单完全等价。
+  // 非 force 且缓存未命中时，沿用 background 层的一次短延时重试兜底。
+  try {
+    const response = await sendAndWait(tab.id, { type: RUNTIME_MESSAGE_TYPES.queryCurrentVideo })
+    if (response?.ok && response.data) {
+      // 回写缓存，让后续查询命中
+      currentVideoByTab.set(tab.id, response.data)
+      return { ok: true, data: response.data }
+    }
+  } catch {
+    if (!force) {
+      // 首次 sendMessage 失败（content script 尚未注入），等 600ms 再试一次
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      try {
+        const response = await sendAndWait(tab.id, { type: RUNTIME_MESSAGE_TYPES.queryCurrentVideo })
+        if (response?.ok && response.data) {
+          currentVideoByTab.set(tab.id, response.data)
+          return { ok: true, data: response.data }
+        }
+      } catch {
+        // 重试仍失败，交给侧栏
+      }
+    }
+  }
+
+  return { ok: false, data: null }
+}
+
+/** chrome.tabs.sendMessage 的泛型薄包装 */
+function sendAndWait(
+  tabId: number,
+  message: RuntimeMessage,
+): Promise<RuntimeResponse<VideoDraft | null>> {
+  return chrome.tabs.sendMessage(tabId, message) as Promise<RuntimeResponse<VideoDraft | null>>
+}

@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 
 import { EXTENSION_NAME } from '@/shared/constants'
 
+import CurrentVideoCard from './components/CurrentVideoCard.vue'
 import FilterTabs from './components/FilterTabs.vue'
 import { useWatchListStore } from './stores/watchlist'
 import RecycleBinView from './views/RecycleBinView.vue'
@@ -28,6 +29,7 @@ onMounted(() => {
     <header class="lw-header">
       <h1 class="lw-header__title">{{ EXTENSION_NAME }}</h1>
       <p class="lw-header__subtitle">跨平台视频稍后再看</p>
+      <CurrentVideoCard />
       <FilterTabs v-if="activeView === 'watchlist'" />
     </header>
 

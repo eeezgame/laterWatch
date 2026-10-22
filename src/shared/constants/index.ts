@@ -21,6 +21,9 @@ export const RUNTIME_MESSAGE_TYPES = {
   ping: 'ping',
   addWatchLater: 'lw:add-watch-later',
   extractVideoInfo: 'lw:extract-video-info',
+  queryCurrentVideo: 'lw:query-current-video',
+  /** 内容脚本主动上报：当前视频详情页信息（注入时 + SPA 导航时触发） */
+  currentVideoChanged: 'lw:current-video-changed',
 } as const
 
 /** 右键菜单 ID */
