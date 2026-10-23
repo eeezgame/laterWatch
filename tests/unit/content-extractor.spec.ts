@@ -13,6 +13,7 @@ type MessageListener = (
 describe('视频详情页信息提取', () => {
   beforeEach(() => {
     document.head.innerHTML = ''
+    document.body.innerHTML = ''
     document.title = ''
     vi.restoreAllMocks()
   })
@@ -121,6 +122,80 @@ describe('视频详情页信息提取', () => {
     if (response.ok && response.data) {
       expect('cover' in response.data).toBe(false)
     }
+  })
+
+  it('抖音用户主页弹窗：document.title 是用户名，标题与封面从弹窗 DOM 提取', () => {
+    document.title = '兔兔兔奶糖🍬的抖音 - 抖音'
+    document.body.innerHTML = `
+      <div class="modal-video-container">
+        <img class="backgroundCover" src="https://p3-pc-sign.douyinpic.com/modal-cover.jpeg">
+      </div>
+      <div class="title" data-e2e="video-desc">各各各摇各各各的 #摇头晃脑舞 #白虎娘 #cos #奶糖大王展开</div>
+    `
+
+    const extractor = createExtractor('douyin')
+    const response = sendExtractMessage(
+      extractor,
+      'https://www.douyin.com/user/MS4wLjABAAAA?from_tab_name=main&modal_id=7699551142255296713&relation=1&vid=7699214338276206194',
+    )
+
+    expect(response).toEqual({
+      ok: true,
+      data: {
+        platform: 'douyin',
+        videoId: '7699551142255296713',
+        title: '各各各摇各各各的 #摇头晃脑舞 #白虎娘 #cos #奶糖大王',
+        cover: 'https://p3-pc-sign.douyinpic.com/modal-cover.jpeg',
+      },
+    })
+  })
+
+  it('抖音精选弹窗：modal_id 作为视频 ID，弹窗标题优先于页面标题', () => {
+    document.title = '天鹅湖转了一个圈 - 抖音'
+    document.body.innerHTML = `
+      <div class="modal-video-container">
+        <img class="backgroundCover" src="https://p3-pc-sign.douyinpic.com/jingxuan-cover.jpeg">
+      </div>
+      <div class="title" data-e2e="video-desc">天鹅湖转了一个圈圈圈圈 #原神展开</div>
+    `
+
+    const extractor = createExtractor('douyin')
+    const response = sendExtractMessage(
+      extractor,
+      'https://www.douyin.com/jingxuan?modal_id=7672749364330237220',
+    )
+
+    expect(response).toEqual({
+      ok: true,
+      data: {
+        platform: 'douyin',
+        videoId: '7672749364330237220',
+        title: '天鹅湖转了一个圈圈圈圈 #原神',
+        cover: 'https://p3-pc-sign.douyinpic.com/jingxuan-cover.jpeg',
+      },
+    })
+  })
+
+  it('弹窗元素缺失时回退到 document.title 与 meta 封面', () => {
+    document.head.innerHTML =
+      '<meta name="lark:url:video_cover_image_url" content="https://p3.douyinpic.com/fallback.jpeg">'
+    document.title = '某视频标题 - 抖音'
+
+    const extractor = createExtractor('douyin')
+    const response = sendExtractMessage(
+      extractor,
+      'https://www.douyin.com/jingxuan?modal_id=7672749364330237220',
+    )
+
+    expect(response).toEqual({
+      ok: true,
+      data: {
+        platform: 'douyin',
+        videoId: '7672749364330237220',
+        title: '某视频标题',
+        cover: 'https://p3.douyinpic.com/fallback.jpeg',
+      },
+    })
   })
 
   it('注入后主动上报一次 currentVideoChanged（当前为视频详情页）', async () => {

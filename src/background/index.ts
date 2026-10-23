@@ -31,7 +31,13 @@ function registerContextMenus(): void {
     id: CONTEXT_MENU_IDS.addCurrentVideo,
     title: '添加到稍后再看',
     contexts: ['page'],
-    documentUrlPatterns: ['*://www.bilibili.com/video/*', '*://www.douyin.com/video/*'],
+    documentUrlPatterns: [
+      '*://www.bilibili.com/video/*',
+      '*://www.douyin.com/video/*',
+      // 抖音弹窗视频页：用户主页 / 精选等板块通过 modal_id 参数播放视频
+      '*://www.douyin.com/user/*',
+      '*://www.douyin.com/jingxuan*',
+    ],
   })
 }
 

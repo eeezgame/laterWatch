@@ -17,14 +17,44 @@ function buildCurrentDraft(platform: Platform): VideoDraft | undefined {
 
   if (!videoId) return undefined
 
+  // 抖音弹窗页（modal_id）：document.title 是用户名，og meta 也不存在，
+  // 标题 / 封面需要从弹窗 DOM 中提取
+  const isModal = isDouyinModalPage(platform)
+
   const draft: VideoDraft = {
     platform,
     videoId,
-    title: extractTitle(),
+    title: (isModal ? extractDouyinModalTitle() : undefined) ?? extractTitle(),
   }
-  const cover = extractCover()
+  const cover = isModal ? (extractDouyinModalCover() ?? extractCover()) : extractCover()
   if (cover) draft.cover = cover
   return draft
+}
+
+/** 判断当前是否为抖音弹窗视频页（modal_id 承载视频 ID 的用户主页 / 精选等页面） */
+function isDouyinModalPage(platform: Platform): boolean {
+  return platform === 'douyin' && /[?&]modal_id=\d+/.test(location.href)
+}
+
+/** 抖音弹窗视频的标题元素：data-e2e 测试钩子相对稳定，不依赖平台样式类名 */
+const DOUYIN_MODAL_TITLE_SELECTOR = '[data-e2e="video-desc"]'
+/** 抖音弹窗视频的封面图：模态容器内的背景封面图 */
+const DOUYIN_MODAL_COVER_SELECTOR = '.modal-video-container img.backgroundCover'
+
+/** 从抖音弹窗提取视频标题：元素文本末尾会拼接「展开 / 收起」按钮文字，需要剥离 */
+function extractDouyinModalTitle(): string | undefined {
+  const raw = document.querySelector(DOUYIN_MODAL_TITLE_SELECTOR)?.textContent ?? ''
+  const cleaned = raw.replace(/(展开|收起)\s*$/, '').trim()
+  return cleaned || undefined
+}
+
+/** 从抖音弹窗提取视频封面 */
+function extractDouyinModalCover(): string | undefined {
+  const img = document.querySelector(DOUYIN_MODAL_COVER_SELECTOR)
+  if (!(img instanceof HTMLImageElement)) return undefined
+
+  const url = (img.currentSrc || img.src || '').trim()
+  return url || undefined
 }
 
 /**

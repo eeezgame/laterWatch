@@ -48,6 +48,16 @@ describe('视频标识解析', () => {
     expect(extractDouyinVideoId('https://www.douyin.com/discover?modal_id=7300123456789')).toBe(
       '7300123456789',
     )
+    // 用户主页弹窗：modal_id 是当前视频 ID，同 URL 中的 vid 不是
+    expect(
+      extractDouyinVideoId(
+        'https://www.douyin.com/user/MS4wLjABAAAA?from_tab_name=main&modal_id=7699551142255296713&relation=1&vid=7699214338276206194',
+      ),
+    ).toBe('7699551142255296713')
+    // 精选板块弹窗
+    expect(
+      extractDouyinVideoId('https://www.douyin.com/jingxuan?modal_id=7672749364330237220'),
+    ).toBe('7672749364330237220')
   })
 })
 
