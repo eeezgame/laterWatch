@@ -55,7 +55,7 @@ export function normalizeWatchList(value: unknown): VideoItem[] {
  * 从标签页地址反解出视频去重键，用于判断某个标签页是否已打开目标视频。
  * 非 B 站 / 抖音视频页返回 null。
  */
-function resolveTabVideoKey(rawUrl: string | undefined): string | null {
+export function resolveVideoKeyFromUrl(rawUrl: string | undefined): string | null {
   if (!rawUrl) return null
 
   const bilibiliId = extractBilibiliVideoId(rawUrl)
@@ -75,7 +75,7 @@ export function findExistingVideoTab<T extends { url?: string }>(
   tabs: T[],
   item: Pick<VideoItem, 'id'>,
 ): T | undefined {
-  return tabs.find((tab) => resolveTabVideoKey(tab.url) === item.id)
+  return tabs.find((tab) => resolveVideoKeyFromUrl(tab.url) === item.id)
 }
 
 /** 由网页抓取到的草稿生成完整待看条目 */

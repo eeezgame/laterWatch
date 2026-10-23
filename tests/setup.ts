@@ -108,7 +108,7 @@ const chromeStorageMock = {
       },
     },
     /** 模拟把消息投递给 background 监听器，与真实运行时一致地遵守 return true 的异步约定 */
-    sendMessage(message?: unknown): Promise<unknown> {
+    sendMessage(message?: unknown, sender: unknown = {}): Promise<unknown> {
       return new Promise((resolve) => {
         let responded = false
         const sendResponse = (response?: unknown): void => {
@@ -117,7 +117,7 @@ const chromeStorageMock = {
         }
 
         const keepChannelOpen = [...messageListeners].some(
-          (listener) => listener(message, {}, sendResponse) === true,
+          (listener) => listener(message, sender, sendResponse) === true,
         )
         if (!keepChannelOpen && !responded) resolve(undefined)
       })
@@ -148,9 +148,10 @@ const chromeStorageMock = {
       return Promise.resolve(undefined)
     },
     onActivated: createEventEmitter<(info: { tabId: number; windowId: number }) => void>(),
-    onUpdated: createEventEmitter<
-      (tabId: number, changeInfo: Record<string, unknown>, tab: unknown) => void
-    >(),
+    onUpdated:
+      createEventEmitter<
+        (tabId: number, changeInfo: Record<string, unknown>, tab: unknown) => void
+      >(),
     onRemoved: createEventEmitter<(tabId: number, info: { windowId?: number }) => void>(),
   },
   windows: {
@@ -164,6 +165,9 @@ const chromeStorageMock = {
 }
 
 vi.stubGlobal('chrome', chromeStorageMock)
+
+// jsdom 未实现 scrollIntoView，侧边栏在视频切换后会滚动定位当前条目
+Element.prototype.scrollIntoView = () => {}
 
 beforeEach(() => {
   storageData.clear()

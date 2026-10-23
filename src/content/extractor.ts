@@ -50,17 +50,36 @@ export function registerVideoInfoExtractor(platform: Platform): void {
   setupActiveReporting(platform)
 }
 
-/** 主动上报：注入后立即上报一次；hook SPA 导航事件持续上报 */
+/** 首次上报前的等待时间，避免脚本注入时标题 / 封面 meta 尚未就位 */
+const INITIAL_REPORT_DELAY = 300
+/** URL 轮询间隔：内容脚本运行在隔离世界，劫持不到页面自身调用的 history API */
+const URL_POLL_INTERVAL = 500
+/** 导航后标题 / 封面通常晚于 URL 更新，持续观察该时长以便补报最终数据 */
+const METADATA_WATCH_DURATION = 3000
+/** 元信息观察的轮询间隔 */
+const METADATA_POLL_INTERVAL = 200
+
+/** 草稿指纹：视频 ID、标题、封面任一变化都视为需要重新上报 */
+function draftSignature(draft: VideoDraft | undefined): string | null {
+  return draft
+    ? JSON.stringify([draft.platform, draft.videoId, draft.title, draft.cover ?? ''])
+    : null
+}
+
+/** 主动上报：注入后上报一次；视频 ID 变化时上报，并持续补齐标题与封面 */
 function setupActiveReporting(platform: Platform): void {
-  let lastReportedId: string | null = null
+  /** 最近一次上报的草稿指纹，undefined 表示尚未上报过 */
+  let lastSignature: string | null | undefined
+  let lastHref = location.href
+  let metadataTimer: number | undefined
 
   function report(): void {
     const draft = buildCurrentDraft(platform)
-    const videoId = draft?.videoId ?? null
+    const signature = draftSignature(draft)
 
-    // 节流：同一视频不重复上报，避免 SPA 反复触发带来的冗余广播
-    if (videoId === lastReportedId) return
-    lastReportedId = videoId
+    // 节流：视频 ID / 标题 / 封面都未变化时不重复广播
+    if (signature === lastSignature) return
+    lastSignature = signature
 
     void chrome.runtime.sendMessage({
       type: RUNTIME_MESSAGE_TYPES.currentVideoChanged,
@@ -68,29 +87,55 @@ function setupActiveReporting(platform: Platform): void {
     })
   }
 
-  // 1) 注入后等 DOM 稳定一点再上报，避免 meta 标签尚未就位
-  const initialTimer = window.setTimeout(report, 300)
+  function stopMetadataWatch(): void {
+    if (metadataTimer === undefined) return
+    window.clearTimeout(metadataTimer)
+    metadataTimer = undefined
+  }
 
-  // 2) hook history.pushState / replaceState（SPA 内部导航的主要通道）
-  const origPush = history.pushState.bind(history)
-  const origReplace = history.replaceState.bind(history)
-  history.pushState = function patchedPush(...args) {
-    const ret = origPush(...args as [unknown, string, string?])
-    queueMicrotask(report)
-    return ret
-  } as typeof history.pushState
-  history.replaceState = function patchedReplace(...args) {
-    const ret = origReplace(...args as [unknown, string, string?])
-    queueMicrotask(report)
-    return ret
-  } as typeof history.replaceState
+  /**
+   * URL 切换后立即上报一次（视频 ID 马上反映到侧栏），
+   * 再在接下来的一段时间内持续补报，直到标题 / 封面与新的视频对齐。
+   * 否则 B 站 SPA 跳转时会把上一个视频的标题和封面带到新卡片上。
+   */
+  function watchMetadata(): void {
+    stopMetadataWatch()
+    const deadline = Date.now() + METADATA_WATCH_DURATION
+
+    function tick(): void {
+      report()
+      if (Date.now() >= deadline) {
+        metadataTimer = undefined
+        return
+      }
+      metadataTimer = window.setTimeout(tick, METADATA_POLL_INTERVAL)
+    }
+
+    report()
+    metadataTimer = window.setTimeout(tick, METADATA_POLL_INTERVAL)
+  }
+
+  /** 轮询地址栏：页面通过 pushState / replaceState 切换视频时 URL 会变化 */
+  function checkUrl(): void {
+    if (location.href === lastHref) return
+    lastHref = location.href
+    watchMetadata()
+  }
+
+  // 1) 注入后等 DOM 稳定一点再上报，避免 meta 标签尚未就位
+  const initialTimer = window.setTimeout(watchMetadata, INITIAL_REPORT_DELAY)
+
+  // 2) 轮询 URL 变化（隔离世界无法拦截页面自身的 history 调用）
+  const urlTimer = window.setInterval(checkUrl, URL_POLL_INTERVAL)
 
   // 3) 监听 popstate（浏览器前进/后退按钮）
-  window.addEventListener('popstate', () => queueMicrotask(report))
+  window.addEventListener('popstate', checkUrl)
 
-  // 4) 页面即将卸载前取消 setTimeout，避免在销毁页面上报
+  // 4) 页面即将卸载前取消所有定时器，避免在销毁页面上报
   window.addEventListener('pagehide', () => {
     window.clearTimeout(initialTimer)
+    window.clearInterval(urlTimer)
+    stopMetadataWatch()
   })
 }
 

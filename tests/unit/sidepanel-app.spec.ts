@@ -4,8 +4,8 @@ import { isReactive } from 'vue'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import App from '@/sidepanel/App.vue'
-import { STORAGE_KEYS } from '@/shared/constants'
-import type { VideoItem } from '@/shared/types'
+import { RUNTIME_MESSAGE_TYPES, STORAGE_KEYS } from '@/shared/constants'
+import type { RuntimeMessage, VideoItem } from '@/shared/types'
 
 /** 模拟浏览器中已打开的标签页，供跳转逻辑查询 */
 interface OpenTab {
@@ -16,6 +16,23 @@ interface OpenTab {
 
 function mountApp() {
   return mount(App, { global: { plugins: [createPinia()] } })
+}
+
+/** 捕获侧边栏注册的 runtime 监听器，用于模拟 background 广播 */
+function captureRuntimeBroadcasts(): (message: RuntimeMessage) => void {
+  const listeners: Array<
+    (message: RuntimeMessage, sender: unknown, sendResponse: () => void) => void
+  > = []
+
+  vi.spyOn(chrome.runtime.onMessage, 'addListener').mockImplementation(((
+    listener: (message: RuntimeMessage, sender: unknown, sendResponse: () => void) => void,
+  ) => {
+    listeners.push(listener)
+  }) as unknown as typeof chrome.runtime.onMessage.addListener)
+
+  return (message) => {
+    listeners.forEach((listener) => listener(message, {}, () => {}))
+  }
 }
 
 function makeItem(patch: Partial<VideoItem> = {}): VideoItem {
@@ -59,6 +76,61 @@ describe('sidepanel App', () => {
     expect(wrapper.find('.lw-header__title').text()).toBe('LaterWatch')
     expect(wrapper.findAll('.lw-filters__tab')).toHaveLength(4)
     expect(wrapper.text()).toContain('暂无待看视频')
+  })
+
+  it('视频 ID 变化时同步更新信息卡片、平台筛选与列表高亮', async () => {
+    const itemA = makeItem({
+      id: 'bilibili:BV1xx411c7mA',
+      title: '视频 A',
+      url: 'https://www.bilibili.com/video/BV1xx411c7mA',
+    })
+    const itemB = makeItem({
+      id: 'bilibili:BV1xx411c7mB',
+      title: '视频 B',
+      url: 'https://www.bilibili.com/video/BV1xx411c7mB',
+    })
+    await chrome.storage.local.set({ [STORAGE_KEYS.watchList]: [itemA, itemB] })
+
+    const broadcast = captureRuntimeBroadcasts()
+    const wrapper = mountApp()
+    await flushPromises()
+
+    broadcast({
+      type: RUNTIME_MESSAGE_TYPES.currentVideoChanged,
+      payload: {
+        platform: 'bilibili',
+        videoId: 'BV1xx411c7mA',
+        title: '视频 A',
+        cover: 'https://i0.hdslb.com/cover-A.jpg',
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('.lw-current__title').text()).toBe('视频 A')
+    expect(wrapper.find('.lw-current__cover img').attributes('src')).toBe(
+      'https://i0.hdslb.com/cover-A.jpg',
+    )
+    expect(wrapper.find('.lw-filters__tab.is-active').text()).toBe('B站')
+    expect(wrapper.find('.lw-list__item.is-current-video .lw-list__title').text()).toBe('视频 A')
+
+    // SPA 切换到下一个视频：卡片、筛选与列表高亮都应跟着视频 ID 走
+    broadcast({
+      type: RUNTIME_MESSAGE_TYPES.currentVideoChanged,
+      payload: {
+        platform: 'bilibili',
+        videoId: 'BV1xx411c7mB',
+        title: '视频 B',
+        cover: 'https://i0.hdslb.com/cover-B.jpg',
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('.lw-current__title').text()).toBe('视频 B')
+    expect(wrapper.find('.lw-current__cover img').attributes('src')).toBe(
+      'https://i0.hdslb.com/cover-B.jpg',
+    )
+    expect(wrapper.find('.lw-filters__tab.is-active').text()).toBe('B站')
+    expect(wrapper.find('.lw-list__item.is-current-video .lw-list__title').text()).toBe('视频 B')
   })
 
   it('底部入口可在待看列表与回收站之间切换', async () => {

@@ -11,16 +11,10 @@ type MessageListener = (
 ) => boolean | undefined
 
 describe('视频详情页信息提取', () => {
-  const origPushState = history.pushState
-  const origReplaceState = history.replaceState
-
   beforeEach(() => {
     document.head.innerHTML = ''
     document.title = ''
     vi.restoreAllMocks()
-    // 恢复被 extractor 劫持的 history 方法（vitest 默认的 restoreAllMocks 管不到直接赋到原生对象上的 patch）
-    history.pushState = origPushState.bind(history)
-    history.replaceState = origReplaceState.bind(history)
   })
 
   it('从 B 站视频页提取标题和封面', () => {
@@ -140,7 +134,7 @@ describe('视频详情页信息提取', () => {
 
     const sentMessages: RuntimeMessage[] = []
     vi.spyOn(chrome.runtime, 'sendMessage').mockImplementation((msg) => {
-      sentMessages.push((msg as unknown) as RuntimeMessage)
+      sentMessages.push(msg as unknown as RuntimeMessage)
       return Promise.resolve({ ok: true })
     })
 
@@ -150,9 +144,7 @@ describe('视频详情页信息提取', () => {
     await vi.advanceTimersByTimeAsync(400)
     vi.useRealTimers()
 
-    const report = sentMessages.find(
-      (m) => m.type === RUNTIME_MESSAGE_TYPES.currentVideoChanged,
-    )
+    const report = sentMessages.find((m) => m.type === RUNTIME_MESSAGE_TYPES.currentVideoChanged)
     expect(report).toBeDefined()
     expect(report?.payload).toMatchObject({
       platform: 'bilibili',
@@ -162,18 +154,15 @@ describe('视频详情页信息提取', () => {
     })
   })
 
-  it('SPA pushState 导航到新视频后再次上报并携带新草稿', async () => {
+  it('视频 ID 变化后自动上报新草稿（页面切换视频不依赖 history hook）', async () => {
     vi.useFakeTimers()
     document.head.innerHTML =
       '<title>视频 A_哔哩哔哩_bilibili</title><meta property="og:image" content="https://i0.hdslb.com/cover-A.jpg">'
-    Object.defineProperty(window, 'location', {
-      value: { href: 'https://www.bilibili.com/video/BV1xx411c7mA' },
-      writable: true,
-    })
+    setLocation('https://www.bilibili.com/video/BV1xx411c7mA')
 
     const sentMessages: RuntimeMessage[] = []
     vi.spyOn(chrome.runtime, 'sendMessage').mockImplementation((msg) => {
-      sentMessages.push((msg as unknown) as RuntimeMessage)
+      sentMessages.push(msg as unknown as RuntimeMessage)
       return Promise.resolve({ ok: true })
     })
 
@@ -181,63 +170,66 @@ describe('视频详情页信息提取', () => {
     await vi.advanceTimersByTimeAsync(400)
 
     // 第一次上报
-    const firstReportCount = sentMessages.filter(
-      (m) => m.type === RUNTIME_MESSAGE_TYPES.currentVideoChanged,
-    ).length
-    expect(firstReportCount).toBe(1)
+    expect(currentVideoReports(sentMessages)).toHaveLength(1)
 
-    // 模拟 SPA 内部导航：pushState + 新 meta + 新 title
+    // 模拟 B 站 SPA 导航：地址先变化，页面标题 / 封面随后才更新
+    setLocation('https://www.bilibili.com/video/BV1xx411c7mB')
+    await vi.advanceTimersByTimeAsync(500)
+
+    const afterUrlChange = currentVideoReports(sentMessages)
+    expect(afterUrlChange).toHaveLength(2)
+    // 视频 ID 已切换到新视频
+    expect(afterUrlChange[1].payload).toMatchObject({ videoId: 'BV1xx411c7mB' })
+
+    // 标题与封面晚到时补报，避免新视频沿用上一个视频的元信息
     document.head.innerHTML =
       '<title>视频 B_哔哩哔哩_bilibili</title><meta property="og:image" content="https://i0.hdslb.com/cover-B.jpg">'
-    Object.defineProperty(window, 'location', {
-      value: { href: 'https://www.bilibili.com/video/BV1xx411c7mB' },
-      writable: true,
-    })
-    history.pushState({}, '', '/video/BV1xx411c7mB')
-    vi.useRealTimers()
-    await Promise.resolve() // queueMicrotask
+    await vi.advanceTimersByTimeAsync(200)
 
-    const allReports = sentMessages.filter(
-      (m) => m.type === RUNTIME_MESSAGE_TYPES.currentVideoChanged,
-    )
-    expect(allReports.length).toBe(2)
-    expect(allReports[1].payload).toMatchObject({
+    const afterMetadata = currentVideoReports(sentMessages)
+    expect(afterMetadata).toHaveLength(3)
+    expect(afterMetadata[2].payload).toMatchObject({
       videoId: 'BV1xx411c7mB',
       title: '视频 B',
       cover: 'https://i0.hdslb.com/cover-B.jpg',
     })
+    vi.useRealTimers()
   })
 
   it('同一视频不重复上报（节流）', async () => {
     vi.useFakeTimers()
     document.head.innerHTML = '<title>视频 A_哔哩哔哩_bilibili</title>'
-    Object.defineProperty(window, 'location', {
-      value: { href: 'https://www.bilibili.com/video/BV1xx411c7mA' },
-      writable: true,
-    })
+    setLocation('https://www.bilibili.com/video/BV1xx411c7mA')
 
     const sentMessages: RuntimeMessage[] = []
     vi.spyOn(chrome.runtime, 'sendMessage').mockImplementation((msg) => {
-      sentMessages.push((msg as unknown) as RuntimeMessage)
+      sentMessages.push(msg as unknown as RuntimeMessage)
       return Promise.resolve({ ok: true })
     })
 
     registerVideoInfoExtractor('bilibili')
     await vi.advanceTimersByTimeAsync(400)
+
+    // 地址与元信息都没有变化
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(currentVideoReports(sentMessages)).toHaveLength(1)
+
+    // 再次写回同一地址（replaceState 常见行为）也不产生新上报
+    setLocation('https://www.bilibili.com/video/BV1xx411c7mA')
+    await vi.advanceTimersByTimeAsync(500)
+    expect(currentVideoReports(sentMessages)).toHaveLength(1)
     vi.useRealTimers()
-
-    // 连续两次 pushState 到同一视频
-    history.pushState({}, '', '/video/BV1xx411c7mA')
-    await Promise.resolve()
-    history.pushState({}, '', '/video/BV1xx411c7mA')
-    await Promise.resolve()
-
-    const reports = sentMessages.filter(
-      (m) => m.type === RUNTIME_MESSAGE_TYPES.currentVideoChanged,
-    )
-    expect(reports.length).toBe(1) // 只有初始注入那次
   })
 })
+
+function currentVideoReports(messages: RuntimeMessage[]): RuntimeMessage[] {
+  return messages.filter((m) => m.type === RUNTIME_MESSAGE_TYPES.currentVideoChanged)
+}
+
+/** 模拟地址栏 href 变化（内容脚本通过轮询感知） */
+function setLocation(href: string): void {
+  Object.defineProperty(window, 'location', { value: { href }, writable: true, configurable: true })
+}
 
 function createExtractor(platform: 'bilibili' | 'douyin'): MessageListener {
   const listeners: MessageListener[] = []

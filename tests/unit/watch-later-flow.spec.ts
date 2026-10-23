@@ -7,7 +7,7 @@ import '@/background'
 import { mountWatchLaterFab } from '@/content/fab'
 import { resolveBilibiliTarget } from '@/content/fab/targets'
 import App from '@/sidepanel/App.vue'
-import { STORAGE_KEYS } from '@/shared/constants'
+import { RUNTIME_MESSAGE_TYPES, STORAGE_KEYS } from '@/shared/constants'
 import type { VideoItem } from '@/shared/types'
 import { getItem } from '@/shared/utils/storage'
 
@@ -139,5 +139,46 @@ describe('网页悬浮按钮到侧边栏的添加闭环', () => {
 
     await flushPromises()
     expect(panel.text()).toContain('B 站视频标题')
+  })
+})
+
+describe('background 当前视频缓存', () => {
+  const draftA = { platform: 'bilibili' as const, videoId: 'BV1xx411c7mA', title: '视频 A' }
+  const draftB = { platform: 'bilibili' as const, videoId: 'BV1xx411c7mB', title: '视频 B' }
+
+  /** 测试专用：指定 sender.tab 模拟内容脚本上报（setup 中的 mock 支持第二个参数） */
+  function sendFromContentScript(message: unknown, sender: unknown): Promise<unknown> {
+    const send = chrome.runtime.sendMessage as unknown as (
+      message: unknown,
+      sender?: unknown,
+    ) => Promise<unknown>
+    return send(message, sender)
+  }
+
+  it('SPA 切换到新视频后不再返回旧 tab 缓存', async () => {
+    // content script 上报视频 A，background 按 tabId 缓存
+    await sendFromContentScript(
+      { type: RUNTIME_MESSAGE_TYPES.currentVideoChanged, payload: draftA },
+      { tab: { id: 5 } },
+    )
+
+    // 同一 tab 地址已切换到视频 B
+    chrome.tabs.query = vi.fn(() =>
+      Promise.resolve([
+        { id: 5, url: 'https://www.bilibili.com/video/BV1xx411c7mB', active: true },
+      ]),
+    ) as unknown as typeof chrome.tabs.query
+    const tabsSendMessage = vi.fn(() => Promise.resolve({ ok: true, data: draftB }))
+    chrome.tabs.sendMessage = tabsSendMessage as unknown as typeof chrome.tabs.sendMessage
+
+    const response = await chrome.runtime.sendMessage({
+      type: RUNTIME_MESSAGE_TYPES.queryCurrentVideo,
+    })
+
+    // 旧缓存作废，改为向内容脚本重新提取
+    expect(response).toEqual({ ok: true, data: draftB })
+    expect(tabsSendMessage).toHaveBeenCalledWith(5, {
+      type: RUNTIME_MESSAGE_TYPES.queryCurrentVideo,
+    })
   })
 })

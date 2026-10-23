@@ -7,7 +7,13 @@ import type {
   VideoDraft,
 } from '@/shared/types'
 import { getItem, setItem } from '@/shared/utils/storage'
-import { createVideoItem, mergeWatchList, normalizeWatchList } from '@/shared/utils/video'
+import {
+  createVideoItem,
+  createVideoItemId,
+  mergeWatchList,
+  normalizeWatchList,
+  resolveVideoKeyFromUrl,
+} from '@/shared/utils/video'
 
 chrome.runtime.onInstalled.addListener(() => {
   void chrome.sidePanel
@@ -133,16 +139,22 @@ chrome.runtime.onMessage.addListener(
 
     if (message.type === RUNTIME_MESSAGE_TYPES.currentVideoChanged) {
       const tabId = sender.tab?.id
+      // 只在内容脚本上报时处理：background 自己的广播也会回到本监听器，
+      // 若不加来源判断会反复转播（扩展页面之间互相震）。
       if (tabId) {
         const draft = message.payload as VideoDraft | undefined
         if (draft) currentVideoByTab.set(tabId, draft)
         else currentVideoByTab.delete(tabId)
+
+        // 广播给所有 runtime context（包括侧栏），侧栏用它实时刷新卡片
+        void chrome.runtime
+          .sendMessage({
+            type: RUNTIME_MESSAGE_TYPES.currentVideoChanged,
+            payload: message.payload ?? null,
+          })
+          // 侧栏未打开时没有接收方，忽略该错误
+          .catch(() => {})
       }
-      // 广播给所有 runtime context（包括侧栏），侧栏用它实时刷新卡片
-      void chrome.runtime.sendMessage({
-        type: RUNTIME_MESSAGE_TYPES.currentVideoChanged,
-        payload: message.payload ?? null,
-      })
       sendResponse({ ok: true })
       return false
     }
@@ -171,9 +183,13 @@ async function queryCurrentVideo(force = false): Promise<RuntimeResponse<VideoDr
   }
 
   if (!force) {
-    // 优先读缓存（content script 主动上报过的最新数据）
+    // 优先读缓存（content script 主动上报过的最新数据）；
+    // 但缓存必须仍对应当前 tab 地址里的视频，SPA 切到新视频后旧缓存立即作废。
     const cached = currentVideoByTab.get(tab.id)
-    if (cached) return { ok: true, data: cached }
+    const tabVideoKey = resolveVideoKeyFromUrl(tab.url)
+    if (cached && tabVideoKey === createVideoItemId(cached.platform, cached.videoId)) {
+      return { ok: true, data: cached }
+    }
   }
 
   const platform = resolvePlatform(tab.url)
@@ -195,7 +211,9 @@ async function queryCurrentVideo(force = false): Promise<RuntimeResponse<VideoDr
       // 首次 sendMessage 失败（content script 尚未注入），等 600ms 再试一次
       await new Promise((resolve) => setTimeout(resolve, 600))
       try {
-        const response = await sendAndWait(tab.id, { type: RUNTIME_MESSAGE_TYPES.queryCurrentVideo })
+        const response = await sendAndWait(tab.id, {
+          type: RUNTIME_MESSAGE_TYPES.queryCurrentVideo,
+        })
         if (response?.ok && response.data) {
           currentVideoByTab.set(tab.id, response.data)
           return { ok: true, data: response.data }
