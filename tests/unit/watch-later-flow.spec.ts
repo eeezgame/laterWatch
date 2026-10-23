@@ -181,4 +181,45 @@ describe('background 当前视频缓存', () => {
       type: RUNTIME_MESSAGE_TYPES.queryCurrentVideo,
     })
   })
+
+  it('暂时屏蔽的抖音精选页：上报不缓存、查询返回空（信息卡片展示占位）', async () => {
+    // 保留 setup 中的消息投递能力（它负责把消息转给 background 监听器），
+    // 只额外记录调用，用于断言 background 广播了 null
+    const deliver = chrome.runtime.sendMessage as unknown as (
+      message: unknown,
+      sender?: unknown,
+    ) => Promise<unknown>
+    const spy = vi.fn((message: unknown, sender?: unknown) => deliver(message, sender))
+    chrome.runtime.sendMessage = spy as unknown as typeof chrome.runtime.sendMessage
+
+    await sendFromContentScript(
+      { type: RUNTIME_MESSAGE_TYPES.currentVideoChanged, payload: draftA },
+      { tab: { id: 7, url: 'https://www.douyin.com/jingxuan?modal_id=7672749364330237220' } },
+    )
+
+    // 屏蔽页广播的是 null，侧栏据此回到占位状态
+    expect(spy).toHaveBeenCalledWith({
+      type: RUNTIME_MESSAGE_TYPES.currentVideoChanged,
+      payload: null,
+    })
+
+    chrome.tabs.query = vi.fn(() =>
+      Promise.resolve([
+        {
+          id: 7,
+          url: 'https://www.douyin.com/jingxuan?modal_id=7672749364330237220',
+          active: true,
+        },
+      ]),
+    ) as unknown as typeof chrome.tabs.query
+    const tabsSendMessage = vi.fn(() => Promise.resolve({ ok: true, data: draftA }))
+    chrome.tabs.sendMessage = tabsSendMessage as unknown as typeof chrome.tabs.sendMessage
+
+    const response = await chrome.runtime.sendMessage({
+      type: RUNTIME_MESSAGE_TYPES.queryCurrentVideo,
+    })
+
+    expect(response).toEqual({ ok: true, data: null })
+    expect(tabsSendMessage).not.toHaveBeenCalled()
+  })
 })

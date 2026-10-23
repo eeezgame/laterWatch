@@ -10,6 +10,7 @@ import { getItem, setItem } from '@/shared/utils/storage'
 import {
   createVideoItem,
   createVideoItemId,
+  isBlockedVideoPage,
   mergeWatchList,
   normalizeWatchList,
   resolveVideoKeyFromUrl,
@@ -149,6 +150,21 @@ chrome.runtime.onMessage.addListener(
       // 若不加来源判断会反复转播（扩展页面之间互相震）。
       if (tabId) {
         const draft = message.payload as VideoDraft | undefined
+
+        // 暂时屏蔽的页面（抖音精选）不进缓存、也不推给侧栏，
+        // 统一广播 null 让信息卡片回到占位状态
+        if (isBlockedVideoPage(sender.tab?.url)) {
+          currentVideoByTab.delete(tabId)
+          void chrome.runtime
+            .sendMessage({
+              type: RUNTIME_MESSAGE_TYPES.currentVideoChanged,
+              payload: null,
+            })
+            .catch(() => {})
+          sendResponse({ ok: true })
+          return false
+        }
+
         if (draft) currentVideoByTab.set(tabId, draft)
         else currentVideoByTab.delete(tabId)
 
@@ -186,6 +202,12 @@ async function queryCurrentVideo(force = false): Promise<RuntimeResponse<VideoDr
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
   if (!tab?.id || !tab.url) {
     return { ok: false, data: null }
+  }
+
+  // 暂时屏蔽的视频页（抖音精选）不返回信息，信息卡片展示占位状态
+  if (isBlockedVideoPage(tab.url)) {
+    currentVideoByTab.delete(tab.id)
+    return { ok: true, data: null }
   }
 
   if (!force) {

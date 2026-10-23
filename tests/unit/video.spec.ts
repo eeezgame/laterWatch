@@ -7,6 +7,7 @@ import {
   extractBilibiliVideoId,
   extractDouyinVideoId,
   findExistingVideoTab,
+  isBlockedVideoPage,
   mergeWatchList,
   normalizeVideoUrl,
   reorderVisibleItems,
@@ -38,6 +39,23 @@ describe('视频标识解析', () => {
     expect(extractBilibiliVideoId('https://space.bilibili.com/123')).toBeNull()
     expect(extractDouyinVideoId('https://www.douyin.com/user/MS4wLjAB')).toBeNull()
     expect(extractDouyinVideoId('')).toBeNull()
+  })
+
+  it('识别暂时屏蔽的视频页（抖音精选），其余视频页不受影响', () => {
+    expect(isBlockedVideoPage('https://www.douyin.com/jingxuan?modal_id=7672749364330237220')).toBe(
+      true,
+    )
+    expect(isBlockedVideoPage('https://www.douyin.com/jingxuan')).toBe(true)
+
+    // 抖音详情页与用户主页弹窗页仍正常展示
+    expect(isBlockedVideoPage('https://www.douyin.com/video/7699551142255296713')).toBe(false)
+    expect(
+      isBlockedVideoPage(
+        'https://www.douyin.com/user/MS4wLjABAAAA?from_tab_name=main&modal_id=7699551142255296713',
+      ),
+    ).toBe(false)
+    expect(isBlockedVideoPage('https://www.bilibili.com/video/BV1xx411c7mD')).toBe(false)
+    expect(isBlockedVideoPage(undefined)).toBe(false)
   })
 
   it('从抖音链接与弹窗参数中解析视频号', () => {

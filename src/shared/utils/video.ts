@@ -26,6 +26,19 @@ export function extractDouyinVideoId(rawUrl: string): string | null {
   return modalId ? modalId[1] : null
 }
 
+/**
+ * 暂时屏蔽的视频页地址：这些页面仍可被识别为视频页（右键菜单等入口不受影响），
+ * 但不在侧栏「当前视频」信息卡片中展示。目前仅屏蔽抖音精选板块（jingxuan）。
+ */
+const TEMPORARILY_BLOCKED_VIDEO_URL_PATTERNS = [/^https?:\/\/(?:www\.)?douyin\.com\/jingxuan/i]
+
+/** 判断地址是否属于暂时屏蔽的视频页（仅影响侧栏信息卡片展示） */
+export function isBlockedVideoPage(rawUrl: string | undefined): boolean {
+  if (!rawUrl) return false
+
+  return TEMPORARILY_BLOCKED_VIDEO_URL_PATTERNS.some((pattern) => pattern.test(rawUrl))
+}
+
 /** 各平台视频条目的规范播放地址 */
 export function normalizeVideoUrl(platform: Platform, videoId: string): string {
   switch (platform) {
