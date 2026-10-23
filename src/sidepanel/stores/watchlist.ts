@@ -2,9 +2,9 @@ import { computed, ref, toRaw } from 'vue'
 import { defineStore } from 'pinia'
 
 import { STORAGE_KEYS } from '@/shared/constants'
-import type { ListFilter, VideoItem } from '@/shared/types'
+import type { ListFilter, VideoDraft, VideoItem } from '@/shared/types'
+import { createVideoItemId, normalizeWatchList, reorderVisibleItems } from '@/shared/utils/video'
 import { getItem, setItem } from '@/shared/utils/storage'
-import { normalizeWatchList, reorderVisibleItems } from '@/shared/utils/video'
 
 /** 移除条目的删除标记，使其回到待看列表（不修改入参） */
 function withoutDeletedAt(item: VideoItem): VideoItem {
@@ -17,6 +17,15 @@ export const useWatchListStore = defineStore('watchList', () => {
   const items = ref<VideoItem[]>([])
   const filter = ref<ListFilter>('all')
   const loading = ref(false)
+
+  /** 当前活动标签页的视频草稿，null 表示非视频页或尚未识别 */
+  const currentDraft = ref<VideoDraft | null>(null)
+
+  /** 当前草稿对应的待看条目 id（platform:videoId 格式），null 表示无 */
+  const currentVideoKey = computed<string | null>(() => {
+    const draft = currentDraft.value
+    return draft ? createVideoItemId(draft.platform, draft.videoId) : null
+  })
 
   /** 待看列表可见条目：排除回收站条目并按平台筛选 */
   const visibleItems = computed(() =>
@@ -110,12 +119,24 @@ export const useWatchListStore = defineStore('watchList', () => {
     filter.value = next
   }
 
+  /** 更新当前活动标签页的视频草稿（识别到视频时调用） */
+  function setCurrentDraft(draft: VideoDraft): void {
+    currentDraft.value = draft
+  }
+
+  /** 清空当前活动标签页的视频草稿（非视频页或切换 tab 时未识别到） */
+  function clearCurrentDraft(): void {
+    currentDraft.value = null
+  }
+
   return {
     items,
     filter,
     loading,
     visibleItems,
     recycledItems,
+    currentDraft,
+    currentVideoKey,
     load,
     persist,
     moveToRecycleBin,
@@ -125,5 +146,7 @@ export const useWatchListStore = defineStore('watchList', () => {
     reorderVisible,
     bindStorageSync,
     setFilter,
+    setCurrentDraft,
+    clearCurrentDraft,
   }
 })

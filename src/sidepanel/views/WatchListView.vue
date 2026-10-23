@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 import { PLATFORM_LABELS } from '@/shared/constants'
 import type { VideoItem } from '@/shared/types'
@@ -14,7 +14,7 @@ const LONG_PRESS_MS = 300
 const PRESS_MOVE_TOLERANCE = 8
 
 const store = useWatchListStore()
-const { visibleItems, loading } = storeToRefs(store)
+const { visibleItems, loading, currentVideoKey, filter } = storeToRefs(store)
 
 const listRef = ref<HTMLUListElement | null>(null)
 
@@ -23,6 +23,9 @@ const dragOrder = ref<string[] | null>(null)
 const draggingId = ref<string | null>(null)
 /** 拖拽结束会紧跟一次 click，先屏蔽以免误触发打开视频 */
 const suppressClick = ref(false)
+
+/** 当前活动标签页视频对应的条目 id（用于高亮和自动滚动） */
+const highlightId = ref<string | null>(null)
 
 let pressTimer: number | null = null
 let pressOrigin: { x: number; y: number } | null = null
@@ -174,6 +177,29 @@ function onItemPointerDown(item: VideoItem, event: PointerEvent): void {
   window.addEventListener('pointerup', onWindowPointerUp)
   window.addEventListener('pointercancel', onWindowPointerUp)
 }
+
+/** currentVideoKey 变化时更新高亮；filter 变化后重新渲染列表也需要滚动定位 */
+function scrollToHighlighted(): void {
+  void nextTick(() => {
+    const ul = listRef.value
+    if (!ul) return
+    const target = ul.querySelector<HTMLElement>('.lw-list__item.is-current-video')
+    target?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  })
+}
+
+watch(
+  currentVideoKey,
+  (key) => {
+    highlightId.value = key
+    scrollToHighlighted()
+  },
+  { immediate: true },
+)
+
+watch(filter, () => {
+  scrollToHighlighted()
+})
 </script>
 
 <template>
@@ -192,7 +218,7 @@ function onItemPointerDown(item: VideoItem, event: PointerEvent): void {
         v-for="item in displayItems"
         :key="item.id"
         class="lw-list__item"
-        :class="{ 'is-dragging': item.id === draggingId }"
+        :class="{ 'is-dragging': item.id === draggingId, 'is-current-video': item.id === highlightId }"
         @pointerdown="(event: PointerEvent) => onItemPointerDown(item, event)"
       >
         <button
