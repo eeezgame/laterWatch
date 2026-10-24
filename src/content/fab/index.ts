@@ -11,7 +11,7 @@ import type { CoverTarget } from './targets'
 import { createToast } from './toast'
 
 const FAB_ROOT_ID = 'lw-fab-root'
-/** 封面右上角的内边距 */
+/** 封面左上角的内边距（左上角避免与 B 站/抖音原生「稍后再看」按钮重叠） */
 const FAB_OFFSET = 8
 /** 鼠标离开封面到按钮之间的缓冲时间 */
 const HIDE_DELAY = 150
@@ -64,7 +64,7 @@ export function mountWatchLaterFab(adapter: WatchLaterFabAdapter): void {
     }
 
     host.style.top = `${rect.top + FAB_OFFSET}px`
-    host.style.left = `${rect.right - host.offsetWidth - FAB_OFFSET}px`
+    host.style.left = `${rect.left + FAB_OFFSET}px`
   }
 
   function applyState(): void {

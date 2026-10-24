@@ -1,7 +1,7 @@
 import type { VideoItem } from '@/shared/types'
 
-export const FAB_ADD_LABEL = '稍后再看'
-export const FAB_ADDED_LABEL = '已添加'
+export const FAB_ADD_LABEL = 'lw:稍后再看'
+export const FAB_ADDED_LABEL = 'lw:已添加'
 
 export interface FabState {
   label: string

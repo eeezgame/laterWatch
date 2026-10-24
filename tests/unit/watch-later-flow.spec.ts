@@ -57,10 +57,10 @@ describe('网页悬浮按钮到侧边栏的添加闭环', () => {
     document.querySelector('img')?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
 
     expect(host.classList.contains('is-hidden')).toBe(false)
-    expect(host.querySelector('.lw-fab__label')?.textContent).toBe('稍后再看')
+    expect(host.querySelector('.lw-fab__label')?.textContent).toBe('lw:稍后再看')
 
     host.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
-    await vi.waitFor(() => expect(host.querySelector('.lw-fab__label')?.textContent).toBe('已添加'))
+    await vi.waitFor(() => expect(host.querySelector('.lw-fab__label')?.textContent).toBe('lw:已添加'))
 
     expect(host.disabled).toBe(true)
     expect(document.getElementById('lw-toast-root')?.textContent).toBe('已加入稍后再看')
@@ -92,18 +92,18 @@ describe('网页悬浮按钮到侧边栏的添加闭环', () => {
 
     cover.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
     host.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
-    await vi.waitFor(() => expect(host.querySelector('.lw-fab__label')?.textContent).toBe('已添加'))
+    await vi.waitFor(() => expect(host.querySelector('.lw-fab__label')?.textContent).toBe('lw:已添加'))
 
     // 侧边栏移入回收站：storage 变更应把按钮刷回可添加态
     await vi.waitFor(() => expect(panel.find('.lw-list__remove').exists()).toBe(true))
     await panel.find('.lw-list__remove').trigger('click')
     await vi.waitFor(() =>
-      expect(host.querySelector('.lw-fab__label')?.textContent).toBe('稍后再看'),
+      expect(host.querySelector('.lw-fab__label')?.textContent).toBe('lw:稍后再看'),
     )
     expect(host.disabled).toBe(false)
 
     host.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
-    await vi.waitFor(() => expect(host.querySelector('.lw-fab__label')?.textContent).toBe('已添加'))
+    await vi.waitFor(() => expect(host.querySelector('.lw-fab__label')?.textContent).toBe('lw:已添加'))
 
     const items = await getItem<VideoItem[]>(STORAGE_KEYS.watchList, [])
     expect(items).toHaveLength(1)
@@ -129,7 +129,7 @@ describe('网页悬浮按钮到侧边栏的添加闭环', () => {
     document.querySelector('img')?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
     host.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
-    await vi.waitFor(() => expect(host.querySelector('.lw-fab__label')?.textContent).toBe('已添加'))
+    await vi.waitFor(() => expect(host.querySelector('.lw-fab__label')?.textContent).toBe('lw:已添加'))
     expect(document.getElementById('lw-toast-root')?.textContent).toBe('已加入稍后再看')
 
     // 脏数据被兜底，新条目正常落盘并出现在侧边栏
