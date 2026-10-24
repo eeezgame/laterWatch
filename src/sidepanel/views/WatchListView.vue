@@ -307,9 +307,18 @@ watch(filter, () => {
             type="button"
             class="lw-list__remove"
             :title="`移入回收站：${item.title}`"
+            :aria-label="`移入回收站：${item.title}`"
             @click="removeVideo(item)"
           >
-            删除
+            <svg viewBox="0 0 24 24" fill="none" width="16" height="16" aria-hidden="true">
+              <path
+                d="M5 7h14M10 7V5.5A1.5 1.5 0 0 1 11.5 4h1A1.5 1.5 0 0 1 14 5.5V7M7 7l.7 11.1A1.9 1.9 0 0 0 9.6 20h4.8a1.9 1.9 0 0 0 1.9-1.9L17 7M10 11v5M14 11v5"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
           </button>
         </div>
 

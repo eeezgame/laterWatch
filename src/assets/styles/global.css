@@ -215,11 +215,12 @@ button {
   min-width: 0;
 }
 
-/* 标题行：平台图标 + 标题，标题超出时省略 */
+/* 标题行：平台图标 + 标题，行高 32px，与右侧删除图标同一行对齐 */
 .lw-list__title-row {
   display: flex;
   align-items: center;
   gap: 5px;
+  height: 32px;
   min-width: 0;
 }
 
@@ -269,22 +270,27 @@ button {
   text-overflow: ellipsis;
 }
 
+/* 删除：图标按钮，与标题同一行居中 */
 .lw-list__remove {
+  display: inline-flex;
   flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   margin-right: 8px;
-  padding: 4px 8px;
-  border: 1px solid var(--lw-color-border);
+  padding: 0;
+  border: 0;
   border-radius: var(--lw-radius-sm);
-  background: #ffffff;
-  font-size: 12px;
+  background: transparent;
   color: var(--lw-color-text-weak);
   transition:
-    border-color 0.15s ease,
+    background 0.15s ease,
     color 0.15s ease;
 }
 
 .lw-list__remove:hover {
-  border-color: #e05555;
+  background: #fdeaec;
   color: #e05555;
 }
 
