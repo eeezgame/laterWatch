@@ -140,10 +140,12 @@ button {
   margin-top: 6px;
 }
 
-/* 封面 + 元信息 + 删除按钮所在的横向行 */
+/* 封面 + 元信息 + 删除按钮所在的横向行，最小高度 90px */
 .lw-list__main {
   display: flex;
+  flex: 1;
   align-items: center;
+  min-height: 90px;
 }
 
 /* 拖拽排序进行中：禁止选中文本，被拖条目浮起以便与落点区分 */
@@ -178,6 +180,7 @@ button {
   display: flex;
   flex: 1;
   gap: 8px;
+  align-self: stretch;
   align-items: center;
   min-width: 0;
   padding: 8px 10px;
@@ -187,10 +190,12 @@ button {
   text-align: left;
 }
 
+/* 封面随卡片高度撑满，图片按比例裁剪铺满封面容器 */
 .lw-list__cover {
   flex: none;
+  align-self: stretch;
   width: 64px;
-  height: 40px;
+  min-height: 40px;
   overflow: hidden;
   border-radius: var(--lw-radius-sm);
   background: var(--lw-color-border);
@@ -459,16 +464,19 @@ button {
 .lw-current__card {
   display: flex;
   gap: 10px;
+  min-height: 130px;
   padding: 10px;
   border: 1px solid var(--lw-color-border);
   border-radius: var(--lw-radius-md);
   background: var(--lw-color-surface);
 }
 
+/* 封面随卡片高度撑满，图片按比例裁剪铺满封面容器 */
 .lw-current__cover {
   flex: none;
+  align-self: stretch;
   width: 96px;
-  height: 60px;
+  min-height: 60px;
   overflow: hidden;
   border-radius: var(--lw-radius-sm);
   background: var(--lw-color-border);
@@ -494,6 +502,7 @@ button {
   display: flex;
   flex: 1;
   flex-direction: column;
+  justify-content: center;
   gap: 6px;
   min-width: 0;
 }
