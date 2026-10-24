@@ -455,4 +455,148 @@ describe('sidepanel App', () => {
 
     expect(wrapper.find('.lw-list__item.is-dragging').exists()).toBe(false)
   })
+
+  it('点击「添加评论」进入编辑态，保存后写入存储', async () => {
+    const item = makeItem({ title: '评论测试视频' })
+    await chrome.storage.local.set({ [STORAGE_KEYS.watchList]: [item] })
+
+    const wrapper = mountApp()
+    await flushPromises()
+
+    // 无评论时展示「添加评论」入口
+    const addBtn = wrapper.find('.lw-comment__add')
+    expect(addBtn.exists()).toBe(true)
+
+    await addBtn.trigger('click')
+    await flushPromises()
+
+    // 进入编辑态：展示 textarea 与保存/取消按钮
+    const textarea = wrapper.find('.lw-comment__textarea')
+    expect(textarea.exists()).toBe(true)
+    await textarea.setValue('精彩片段在 02:15 处')
+
+    await wrapper.find('.lw-comment__save').trigger('click')
+    await flushPromises()
+
+    // 评论文本落盘
+    const stored = await readStoredItems()
+    expect(stored[0].comment).toBe('精彩片段在 02:15 处')
+
+    // 渲染为带锚点的评论条
+    expect(wrapper.find('.lw-comment__text').text()).toBe('精彩片段在 02:15 处')
+    const anchor = wrapper.find('.lw-comment__anchor')
+    expect(anchor.exists()).toBe(true)
+    expect(anchor.text()).toBe('02:15')
+  })
+
+  it('评论编辑态可取消，不写入存储', async () => {
+    await chrome.storage.local.set({ [STORAGE_KEYS.watchList]: [makeItem()] })
+
+    const wrapper = mountApp()
+    await flushPromises()
+
+    await wrapper.find('.lw-comment__add').trigger('click')
+    await flushPromises()
+    await wrapper.find('.lw-comment__textarea').setValue('临时内容')
+    await wrapper.find('.lw-comment__cancel').trigger('click')
+    await flushPromises()
+
+    const stored = await readStoredItems()
+    expect(stored[0].comment).toBeUndefined()
+    expect(wrapper.find('.lw-comment__textarea').exists()).toBe(false)
+  })
+
+  it('保存空评论会清除已有的 comment 字段', async () => {
+    const item = makeItem({ comment: '原有评论 01:00' })
+    await chrome.storage.local.set({ [STORAGE_KEYS.watchList]: [item] })
+
+    const wrapper = mountApp()
+    await flushPromises()
+
+    // 已有评论时展示编辑按钮
+    await wrapper.find('.lw-comment__edit').trigger('click')
+    await flushPromises()
+    await wrapper.find('.lw-comment__textarea').setValue('   ')
+    await wrapper.find('.lw-comment__save').trigger('click')
+    await flushPromises()
+
+    const stored = await readStoredItems()
+    expect(stored[0].comment).toBeUndefined()
+  })
+
+  it('点击时间锚点向已打开的视频标签页发送 seek 消息', async () => {
+    const item = makeItem({ comment: '跳到 02:15' })
+    await chrome.storage.local.set({ [STORAGE_KEYS.watchList]: [item] })
+
+    // 模拟该视频已在标签页 9 中打开
+    stubOpenTabs([{ id: 9, windowId: 3, url: item.url }])
+    const tabsUpdate = vi.spyOn(chrome.tabs, 'update')
+    const windowsUpdate = vi.spyOn(chrome.windows, 'update')
+    const tabsSendMessage = vi.fn(() => Promise.resolve({ ok: true, data: { time: 135 } }))
+    chrome.tabs.sendMessage = tabsSendMessage as unknown as typeof chrome.tabs.sendMessage
+
+    const wrapper = mountApp()
+    await flushPromises()
+
+    await wrapper.find('.lw-comment__anchor').trigger('click')
+    await flushPromises()
+
+    // 激活已打开的标签页并聚焦窗口
+    expect(tabsUpdate).toHaveBeenCalledWith(9, { active: true })
+    expect(windowsUpdate).toHaveBeenCalledWith(3, { focused: true })
+    // 发送 seek 消息，02:15 = 135 秒
+    expect(tabsSendMessage).toHaveBeenCalledWith(9, {
+      type: RUNTIME_MESSAGE_TYPES.seekVideo,
+      payload: { time: 135 },
+    })
+  })
+
+  it('视频未打开时点击锚点会新开标签页（不发送 seek）', async () => {
+    const item = makeItem({ comment: '02:15 精彩' })
+    await chrome.storage.local.set({ [STORAGE_KEYS.watchList]: [item] })
+
+    stubOpenTabs([])
+    const tabsCreate = vi.spyOn(chrome.tabs, 'create')
+    const tabsSendMessage = vi.fn()
+    chrome.tabs.sendMessage = tabsSendMessage as unknown as typeof chrome.tabs.sendMessage
+
+    const wrapper = mountApp()
+    await flushPromises()
+
+    await wrapper.find('.lw-comment__anchor').trigger('click')
+    await flushPromises()
+
+    expect(tabsCreate).toHaveBeenCalledWith({ url: item.url })
+    expect(tabsSendMessage).not.toHaveBeenCalled()
+  })
+
+  it('评论条交互不会触发打开视频', async () => {
+    const item = makeItem({ comment: '02:15' })
+    await chrome.storage.local.set({ [STORAGE_KEYS.watchList]: [item] })
+
+    stubOpenTabs([])
+    const tabsCreate = vi.spyOn(chrome.tabs, 'create')
+
+    const wrapper = mountApp()
+    await flushPromises()
+
+    // 点击编辑按钮不应打开视频
+    await wrapper.find('.lw-comment__edit').trigger('click')
+    await flushPromises()
+    expect(tabsCreate).not.toHaveBeenCalled()
+  })
+
+  it('长按评论条不进入拖拽排序', async () => {
+    const item = makeItem({ comment: '带评论的条目' })
+    await chrome.storage.local.set({ [STORAGE_KEYS.watchList]: [item] })
+
+    const wrapper = mountApp()
+    await flushPromises()
+    stubRowRects(wrapper)
+
+    await longPress(wrapper.find('.lw-list__comment').element)
+    await flushPromises()
+
+    expect(wrapper.find('.lw-list__item.is-dragging').exists()).toBe(false)
+  })
 })

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 
 import { PLATFORM_LABELS } from '@/shared/constants'
+import { parseCommentSegments } from '@/shared/utils/comment'
 import type { VideoItem } from '@/shared/types'
 
 import { useWatchListStore } from '../stores/watchlist'
@@ -68,26 +69,36 @@ function confirmPurge(): void {
 
       <ul class="lw-list__items">
         <li v-for="item in recycledItems" :key="item.id" class="lw-list__item">
-          <span class="lw-list__meta">
-            <span class="lw-list__title">{{ item.title }}</span>
-            <span class="lw-list__platform">{{ PLATFORM_LABELS[item.platform] }}</span>
-          </span>
-          <button
-            type="button"
-            class="lw-recycle__action"
-            :title="`恢复：${item.title}`"
-            @click="restoreVideo(item)"
-          >
-            恢复
-          </button>
-          <button
-            type="button"
-            class="lw-recycle__action lw-recycle__action--danger"
-            :title="`永久删除：${item.title}`"
-            @click="askPurgeOne(item)"
-          >
-            永久删除
-          </button>
+          <div class="lw-list__main">
+            <span class="lw-list__meta">
+              <span class="lw-list__title">{{ item.title }}</span>
+              <span class="lw-list__platform">{{ PLATFORM_LABELS[item.platform] }}</span>
+            </span>
+            <button
+              type="button"
+              class="lw-recycle__action"
+              :title="`恢复：${item.title}`"
+              @click="restoreVideo(item)"
+            >
+              恢复
+            </button>
+            <button
+              type="button"
+              class="lw-recycle__action lw-recycle__action--danger"
+              :title="`永久删除：${item.title}`"
+              @click="askPurgeOne(item)"
+            >
+              永久删除
+            </button>
+          </div>
+          <!-- 回收站中的评论只读展示，时间锚点不参与跳转 -->
+          <div v-if="item.comment" class="lw-list__comment lw-list__comment--recycle">
+            <span class="lw-comment__text">
+              <template v-for="(seg, idx) in parseCommentSegments(item.comment)" :key="idx">
+                <span>{{ seg.content }}</span>
+              </template>
+            </span>
+          </div>
         </li>
       </ul>
     </template>

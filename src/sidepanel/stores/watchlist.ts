@@ -103,6 +103,25 @@ export const useWatchListStore = defineStore('watchList', () => {
     await persist()
   }
 
+  /**
+   * 更新单条条目的评论文本。每个条目至多一条评论：
+   * 传入空字符串时清除评论字段，保持数据结构精简。
+   */
+  async function updateComment(id: string, comment: string): Promise<void> {
+    const target = items.value.find((item) => item.id === id)
+    if (!target) return
+
+    const trimmed = comment.trim()
+    items.value = items.value.map((item) => {
+      if (item.id !== id) return item
+      const next = { ...item }
+      if (trimmed) next.comment = trimmed
+      else delete next.comment
+      return next
+    })
+    await persist()
+  }
+
   /** 订阅 storage 变更，使网页悬浮按钮添加的条目即时出现在侧边栏 */
   function bindStorageSync(): void {
     chrome.storage.onChanged.addListener((changes, areaName) => {
@@ -144,6 +163,7 @@ export const useWatchListStore = defineStore('watchList', () => {
     purgeItem,
     clearRecycleBin,
     reorderVisible,
+    updateComment,
     bindStorageSync,
     setFilter,
     setCurrentDraft,

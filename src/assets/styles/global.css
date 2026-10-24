@@ -122,7 +122,7 @@ button {
 
 .lw-list__item {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   border: 1px solid var(--lw-color-border);
   border-radius: var(--lw-radius-md);
   background: var(--lw-color-surface);
@@ -138,6 +138,12 @@ button {
 
 .lw-list__item + .lw-list__item {
   margin-top: 6px;
+}
+
+/* 封面 + 元信息 + 删除按钮所在的横向行 */
+.lw-list__main {
+  display: flex;
+  align-items: center;
 }
 
 /* 拖拽排序进行中：禁止选中文本，被拖条目浮起以便与落点区分 */
@@ -159,8 +165,13 @@ button {
 }
 
 @keyframes lw-highlight-pulse {
-  0%, 100% { box-shadow: none; }
-  50% { box-shadow: 0 0 0 2px rgb(78 110 242 / 30%); }
+  0%,
+  100% {
+    box-shadow: none;
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgb(78 110 242 / 30%);
+  }
 }
 
 .lw-list__open {
@@ -233,8 +244,8 @@ button {
   color: #e05555;
 }
 
-/* 回收站列表项中的标题信息块直接位于 li 下，需自行撑开剩余宽度 */
-.lw-list__item > .lw-list__meta {
+/* 回收站列表项中的标题信息块位于 .lw-list__main 下，需自行撑开剩余宽度 */
+.lw-list__main > .lw-list__meta {
   flex: 1;
   padding: 8px 10px;
 }
@@ -503,8 +514,12 @@ button {
 }
 
 @keyframes lw-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .lw-current__title {
@@ -551,4 +566,134 @@ button {
 
 .lw-current__action:disabled {
   cursor: default;
+}
+
+/* ============ 评论条 ============ */
+.lw-list__comment {
+  padding: 0 10px 10px 82px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--lw-color-text-weak);
+}
+
+/* 回收站无封面，评论与标题左对齐 */
+.lw-list__comment--recycle {
+  padding-left: 10px;
+}
+
+/* 无评论时的「添加评论」按钮，视觉上弱化为文本链接 */
+.lw-comment__add {
+  margin: 0;
+  padding: 2px 0 8px 82px;
+  border: 0;
+  background: transparent;
+  color: var(--lw-color-text-weak);
+  font-size: 12px;
+  text-align: left;
+  transition: color 0.15s ease;
+}
+
+.lw-comment__add:hover {
+  color: var(--lw-color-primary);
+}
+
+/* 已存在评论时的文本容器，支持锚点与普通文本混排 */
+.lw-comment__text {
+  display: inline;
+  word-break: break-word;
+}
+
+/* 时间锚点：可点击的时间戳，hover 时高亮反馈 */
+.lw-comment__anchor {
+  padding: 0 3px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--lw-color-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.lw-comment__anchor:hover {
+  background: var(--lw-color-primary);
+  color: #ffffff;
+}
+
+/* 编辑按钮 */
+.lw-comment__edit {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--lw-color-text-weak);
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.lw-comment__edit:hover {
+  color: var(--lw-color-primary);
+}
+
+/* 编辑态 textarea */
+.lw-comment__textarea {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--lw-color-border);
+  border-radius: var(--lw-radius-sm);
+  background: #ffffff;
+  color: var(--lw-color-text);
+  font: inherit;
+  font-size: 12px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.lw-comment__textarea:focus {
+  border-color: var(--lw-color-primary);
+}
+
+/* 编辑态操作按钮区 */
+.lw-comment__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.lw-comment__save,
+.lw-comment__cancel {
+  padding: 3px 10px;
+  border: 1px solid var(--lw-color-border);
+  border-radius: var(--lw-radius-sm);
+  background: #ffffff;
+  font-size: 12px;
+  color: var(--lw-color-text-weak);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.lw-comment__save {
+  border-color: var(--lw-color-primary);
+  background: var(--lw-color-primary);
+  color: #ffffff;
+}
+
+.lw-comment__save:hover {
+  background: #3a5be0;
+  border-color: #3a5be0;
+}
+
+.lw-comment__cancel:hover {
+  border-color: var(--lw-color-text-weak);
+  color: var(--lw-color-text);
 }

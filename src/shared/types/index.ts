@@ -17,6 +17,8 @@ export interface VideoItem {
   completedAt?: number
   /** 移入回收站的时间戳（毫秒），非空表示条目已删除 */
   deletedAt?: number
+  /** 单条评论文本，其中形如 02:15 / 1:02:15 的片段会被识别为可点击时间锚点 */
+  comment?: string
 }
 
 /** 网页悬浮按钮抓取到的视频草稿，尚未生成完整待看条目 */

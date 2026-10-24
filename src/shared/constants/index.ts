@@ -24,6 +24,8 @@ export const RUNTIME_MESSAGE_TYPES = {
   queryCurrentVideo: 'lw:query-current-video',
   /** 内容脚本主动上报：当前视频详情页信息（注入时 + SPA 导航时触发） */
   currentVideoChanged: 'lw:current-video-changed',
+  /** 侧栏 -> 内容脚本：让页面视频播放器跳转到指定秒数 */
+  seekVideo: 'lw:seek-video',
 } as const
 
 /** 右键菜单 ID */
