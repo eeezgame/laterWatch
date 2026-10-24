@@ -1,10 +1,11 @@
 <script setup lang="ts">import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 
-import { PLATFORM_LABELS, RUNTIME_MESSAGE_TYPES } from '@/shared/constants'
-import type { Platform, RuntimeMessage, RuntimeResponse, VideoDraft } from '@/shared/types'
+import { RUNTIME_MESSAGE_TYPES } from '@/shared/constants'
+import type { RuntimeMessage, RuntimeResponse, VideoDraft } from '@/shared/types'
 import { createVideoItemId } from '@/shared/utils/video'
-import { useWatchListStore } from '../stores/watchlist';
+import { useWatchListStore } from '../stores/watchlist'
+import PlatformIcon from './PlatformIcon.vue'
 /** tabs.onActivated 回调参数（@types/chrome 未导出该接口，这里内联声明） */
 interface TabActiveInfo {
  tabId: number;
@@ -132,12 +133,6 @@ onUnmounted(() => {
  chrome.tabs.onUpdated.removeListener(handleTabUpdated);
  chrome.runtime.onMessage.removeListener(handleRuntimeMessage);
 });
-/** 平台徽章的背景色：B站蓝 / 抖音红 */
-const PLATFORM_BADGE_COLORS: Record<Platform, string> = {
- bilibili: '#00aeec',
- douyin: '#fe2c55',
- local: '#7a8194',
-};
 </script>
 
 <template>
@@ -185,12 +180,7 @@ const PLATFORM_BADGE_COLORS: Record<Platform, string> = {
       </div>
       <div class="lw-current__info">
         <div class="lw-current__meta-row">
-          <span
-            class="lw-current__platform"
-            :style="{ backgroundColor: PLATFORM_BADGE_COLORS[currentDraft!.platform] }"
-          >
-            {{ PLATFORM_LABELS[currentDraft!.platform] }}
-          </span>
+          <PlatformIcon :platform="currentDraft!.platform" :size="18" />
           <button
             type="button"
             class="lw-current__refresh lw-current__refresh--inline"

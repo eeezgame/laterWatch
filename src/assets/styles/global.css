@@ -210,6 +210,45 @@ button {
   min-width: 0;
 }
 
+/* 标题行：平台图标 + 标题，标题超出时省略 */
+.lw-list__title-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.lw-list__title-row > .lw-list__title {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 平台标识：B 站 / 抖音使用站点图标，本地视频保留文字标签 */
+.lw-platform {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.lw-platform--bilibili {
+  color: #00aeec;
+}
+
+.lw-platform--douyin {
+  color: #161823;
+}
+
+.lw-platform--local {
+  padding: 1px 6px;
+  border-radius: var(--lw-radius-sm);
+  background: var(--lw-color-text-weak);
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 16px;
+}
+
 .lw-list__platform {
   align-self: flex-start;
   padding: 1px 6px;
@@ -457,15 +496,6 @@ button {
   flex-direction: column;
   gap: 6px;
   min-width: 0;
-}
-
-.lw-current__platform {
-  align-self: flex-start;
-  padding: 1px 7px;
-  border-radius: var(--lw-radius-sm);
-  color: #ffffff;
-  font-size: 11px;
-  line-height: 16px;
 }
 
 .lw-current__meta-row {

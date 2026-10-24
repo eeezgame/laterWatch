@@ -2,11 +2,12 @@
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, ref, watch } from 'vue'
 
-import { PLATFORM_LABELS, RUNTIME_MESSAGE_TYPES } from '@/shared/constants'
+import { RUNTIME_MESSAGE_TYPES } from '@/shared/constants'
 import { parseCommentSegments } from '@/shared/utils/comment'
 import type { VideoItem } from '@/shared/types'
 import { findExistingVideoTab } from '@/shared/utils/video'
 
+import PlatformIcon from '../components/PlatformIcon.vue'
 import { useWatchListStore } from '../stores/watchlist'
 
 /** 长按该时长后进入拖拽排序模式 */
@@ -296,8 +297,10 @@ watch(filter, () => {
               />
             </span>
             <span class="lw-list__meta">
-              <span class="lw-list__title">{{ item.title }}</span>
-              <span class="lw-list__platform">{{ PLATFORM_LABELS[item.platform] }}</span>
+              <span class="lw-list__title-row">
+                <PlatformIcon :platform="item.platform" :size="14" />
+                <span class="lw-list__title">{{ item.title }}</span>
+              </span>
             </span>
           </button>
           <button
