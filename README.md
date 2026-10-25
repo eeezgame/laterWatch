@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/icons/icon128.png" alt="LaterWatch 图标" width="128" />
+</p>
+
 # LaterWatch — 跨平台视频稍后再看侧边栏插件
 
 一款 Chromium 内核浏览器的 Manifest V3 侧边栏扩展，聚合 **B 站 / 抖音网页视频 / 本地视频** 三类资源，以浏览器侧边栏为载体进行统一管理，并提供 **回收站式删除机制**，避免误删。
