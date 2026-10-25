@@ -279,10 +279,11 @@ watch(filter, () => {
         }"
         @pointerdown="(event: PointerEvent) => onItemPointerDown(item, event)"
       >
-        <div class="lw-list__main">
+        <div class="lw-list__card">
+          <!-- 左栏：封面纵向通栏，点击打开视频 -->
           <button
             type="button"
-            class="lw-list__open"
+            class="lw-list__open lw-list__open--cover"
             :class="{ 'is-completed': item.completedAt }"
             :title="`打开视频：${item.title}（长按可拖动排序）`"
             @click="openVideo(item)"
@@ -296,82 +297,94 @@ watch(filter, () => {
                 @error="onCoverError"
               />
             </span>
-            <span class="lw-list__meta">
-              <span class="lw-list__title-row">
-                <PlatformIcon :platform="item.platform" :size="14" />
-                <span class="lw-list__title">{{ item.title }}</span>
-              </span>
-            </span>
           </button>
-          <button
-            type="button"
-            class="lw-list__remove"
-            :title="`移入回收站：${item.title}`"
-            :aria-label="`移入回收站：${item.title}`"
-            @click="removeVideo(item)"
-          >
-            <svg viewBox="0 0 24 24" fill="none" width="16" height="16" aria-hidden="true">
-              <path
-                d="M5 7h14M10 7V5.5A1.5 1.5 0 0 1 11.5 4h1A1.5 1.5 0 0 1 14 5.5V7M7 7l.7 11.1A1.9 1.9 0 0 0 9.6 20h4.8a1.9 1.9 0 0 0 1.9-1.9L17 7M10 11v5M14 11v5"
-                stroke="currentColor"
-                stroke-width="1.6"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
 
-        <!-- 评论条：每个条目至多一条，评论文本中的时间戳会渲染为可点击锚点 -->
-        <div v-if="item.comment && editingId !== item.id" class="lw-list__comment">
-          <span class="lw-comment__text">
-            <template v-for="(seg, idx) in parseCommentSegments(item.comment)" :key="idx">
-              <span v-if="seg.type === 'text'">{{ seg.content }}</span>
+          <!-- 右栏：上为标题行（标题 + 删除），下为评论区 -->
+          <div class="lw-list__right">
+            <div class="lw-list__header">
               <button
-                v-else
                 type="button"
-                class="lw-comment__anchor"
-                :title="`跳转到 ${seg.content}`"
-                @click="seekTo(item, seg.time!)"
+                class="lw-list__open lw-list__open--title"
+                :class="{ 'is-completed': item.completedAt }"
+                :title="`打开视频：${item.title}（长按可拖动排序）`"
+                @click="openVideo(item)"
               >
-                {{ seg.content }}
+                <span class="lw-list__title-row">
+                  <PlatformIcon :platform="item.platform" :size="14" />
+                  <span class="lw-list__title">{{ item.title }}</span>
+                </span>
               </button>
-            </template>
-          </span>
-          <button
-            type="button"
-            class="lw-comment__edit"
-            :title="`编辑评论：${item.title}`"
-            @click="startEdit(item)"
-          >
-            编辑
-          </button>
-        </div>
+              <button
+                type="button"
+                class="lw-list__remove"
+                :title="`移入回收站：${item.title}`"
+                :aria-label="`移入回收站：${item.title}`"
+                @click="removeVideo(item)"
+              >
+                <svg viewBox="0 0 24 24" fill="none" width="16" height="16" aria-hidden="true">
+                  <path
+                    d="M5 7h14M10 7V5.5A1.5 1.5 0 0 1 11.5 4h1A1.5 1.5 0 0 1 14 5.5V7M7 7l.7 11.1A1.9 1.9 0 0 0 9.6 20h4.8a1.9 1.9 0 0 0 1.9-1.9L17 7M10 11v5M14 11v5"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
 
-        <!-- 评论编辑态 -->
-        <div v-else-if="editingId === item.id" class="lw-list__comment">
-          <textarea
-            v-model="editDraft"
-            class="lw-comment__textarea"
-            rows="2"
-            placeholder="添加评论，形如 02:15 的时间会自动成为可点击锚点"
-          />
-          <div class="lw-comment__actions">
-            <button type="button" class="lw-comment__save" @click="saveEdit(item)">保存</button>
-            <button type="button" class="lw-comment__cancel" @click="cancelEdit">取消</button>
+            <!-- 评论条：每个条目至多一条，评论文本中的时间戳会渲染为可点击锚点 -->
+            <div v-if="item.comment && editingId !== item.id" class="lw-list__comment">
+              <span class="lw-comment__text">
+                <template v-for="(seg, idx) in parseCommentSegments(item.comment)" :key="idx">
+                  <span v-if="seg.type === 'text'">{{ seg.content }}</span>
+                  <button
+                    v-else
+                    type="button"
+                    class="lw-comment__anchor"
+                    :title="`跳转到 ${seg.content}`"
+                    @click="seekTo(item, seg.time!)"
+                  >
+                    {{ seg.content }}
+                  </button>
+                </template>
+              </span>
+              <button
+                type="button"
+                class="lw-comment__edit"
+                :title="`编辑评论：${item.title}`"
+                @click="startEdit(item)"
+              >
+                编辑
+              </button>
+            </div>
+
+            <!-- 评论编辑态 -->
+            <div v-else-if="editingId === item.id" class="lw-list__comment">
+              <textarea
+                v-model="editDraft"
+                class="lw-comment__textarea"
+                rows="2"
+                placeholder="添加评论，形如 02:15 的时间会自动成为可点击锚点"
+              />
+              <div class="lw-comment__actions">
+                <button type="button" class="lw-comment__save" @click="saveEdit(item)">保存</button>
+                <button type="button" class="lw-comment__cancel" @click="cancelEdit">取消</button>
+              </div>
+            </div>
+
+            <!-- 无评论时的添加入口 -->
+            <button
+              v-else
+              type="button"
+              class="lw-list__comment lw-comment__add"
+              :title="`为 ${item.title} 添加评论`"
+              @click="startEdit(item)"
+            >
+              添加评论
+            </button>
           </div>
         </div>
-
-        <!-- 无评论时的添加入口 -->
-        <button
-          v-else
-          type="button"
-          class="lw-list__comment lw-comment__add"
-          :title="`为 ${item.title} 添加评论`"
-          @click="startEdit(item)"
-        >
-          添加评论
-        </button>
       </li>
     </ul>
   </section>

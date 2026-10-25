@@ -176,26 +176,61 @@ button {
   }
 }
 
+/* 卡片主体：左栏封面通栏 + 右栏（上标题行、下评论区），整体最小高度 110px */
+.lw-list__card {
+  display: flex;
+  align-items: stretch;
+  min-height: 110px;
+}
+
+/* 打开视频按钮通用重置（封面列与标题行各一个） */
 .lw-list__open {
   display: flex;
-  flex: 1;
-  gap: 8px;
-  align-self: stretch;
   align-items: center;
   min-width: 0;
-  padding: 8px 10px;
+  padding: 0;
   border: 0;
-  border-radius: inherit;
   background: transparent;
   text-align: left;
 }
 
-/* 封面随卡片高度撑满，图片按比例裁剪铺满封面容器 */
-.lw-list__cover {
+/* 左栏封面：纵向通栏，与右栏以竖线分隔 */
+.lw-list__open--cover {
   flex: none;
   align-self: stretch;
+  padding: 8px 10px;
+  border-right: 1px solid var(--lw-color-border);
+}
+
+/* 右栏：上标题行、下评论区 */
+.lw-list__right {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* 右上标题行：标题居左、删除按钮居最右，与评论区以横线分隔 */
+.lw-list__header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid var(--lw-color-border);
+}
+
+/* 标题行中的可点击标题区域，占满剩余宽度 */
+.lw-list__open--title {
+  flex: 1;
+  align-self: stretch;
+}
+
+/* 封面固定 64×94：卡片最小高度 110px 减去左栏上下内边距 16px，
+   最小高度时铺满左栏；卡片内容变高时封面保持固定尺寸、垂直居中，不再拉伸 */
+.lw-list__cover {
+  flex: none;
   width: 64px;
-  min-height: 40px;
+  height: 94px;
   overflow: hidden;
   border-radius: var(--lw-radius-sm);
   background: var(--lw-color-border);
@@ -270,7 +305,7 @@ button {
   text-overflow: ellipsis;
 }
 
-/* 删除：图标按钮，与标题同一行居中 */
+/* 删除：图标按钮，位于标题行最右侧 */
 .lw-list__remove {
   display: inline-flex;
   flex: none;
@@ -278,7 +313,6 @@ button {
   justify-content: center;
   width: 28px;
   height: 28px;
-  margin-right: 8px;
   padding: 0;
   border: 0;
   border-radius: var(--lw-radius-sm);
@@ -614,8 +648,10 @@ button {
 }
 
 /* ============ 评论条 ============ */
+/* 位于右栏下半区，撑满剩余空间形成大面积评论区域 */
 .lw-list__comment {
-  padding: 0 10px 10px 82px;
+  flex: 1;
+  padding: 6px 10px 10px;
   font-size: 12px;
   line-height: 1.5;
   color: var(--lw-color-text-weak);
@@ -629,7 +665,7 @@ button {
 /* 无评论时的「添加评论」按钮，视觉上弱化为文本链接 */
 .lw-comment__add {
   margin: 0;
-  padding: 2px 0 8px 82px;
+  padding: 6px 10px 10px;
   border: 0;
   background: transparent;
   color: var(--lw-color-text-weak);
